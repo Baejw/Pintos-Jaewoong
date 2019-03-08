@@ -99,6 +99,7 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
+  //blocks the thread using somophore, wake up checking in timer_interrupt.
   while (timer_elapsed (start) < ticks) 
     thread_yield ();
 }
