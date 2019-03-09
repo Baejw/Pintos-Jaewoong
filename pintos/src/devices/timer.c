@@ -77,11 +77,13 @@ timer_calibrate (void)
 int64_t
 timer_ticks (void) 
 {
+  
   enum intr_level old_level = intr_disable ();
   int64_t t = ticks;
   intr_set_level (old_level);
   barrier ();
   return t;
+  
 }
 
 /* Returns the number of timer ticks elapsed since THEN, which
@@ -96,12 +98,16 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
+  int64_t now = timer_ticks();
+	thread_sleep (ticks+now);
+/*
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
   //blocks the thread using somophore, wake up checking in timer_interrupt.
   while (timer_elapsed (start) < ticks) 
     thread_yield ();
+	*/
 }
 
 /* Suspends execution for approximately MS milliseconds. */

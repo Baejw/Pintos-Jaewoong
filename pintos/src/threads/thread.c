@@ -561,4 +561,43 @@ allocate_tid (void)
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
-uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+int32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+void
+thread_sleep (int64_t ticks)
+{
+	enum intr_level old_intr_level;
+	struct thread * current_thread = thread_current();
+
+	printf("sleeping  %d\n",ticks);
+	printf("time now = %d\n",timer_ticks());
+	old_intr_level = intr_disable(); 
+	if(current_thread != idle_thread && ticks > 0)
+	{
+										
+		current_thread->sleep_tick = ticks;
+																
+		list_push_back(&sleep_list, &current_thread -> elem);
+			 
+		thread_block();
+	}
+
+	intr_set_level (old_intr_level);
+
+}
+
+void
+thread_alarm(void)
+{
+	struct list_elem * temp;
+	temp = list_begin(&sleep_list);
+	end = list_end(&sleep_list);
+	
+	while(temp != end)
+	{
+		struct thread * temp_thread = list_entry(
+	}
+
+
+}
+								
