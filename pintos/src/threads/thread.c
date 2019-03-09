@@ -29,6 +29,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* List of sleeping thread list. */
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -95,7 +98,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
-
+  list_init (&sleep_list);
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -112,7 +115,7 @@ thread_start (void)
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
-
+ 	 
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -202,7 +205,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
+  
   return tid;
 }
 
