@@ -237,10 +237,13 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
+  	
+	printf("%s %d %d\n",t->name,t->status,is_thread(t));
 
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
+	
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
@@ -569,8 +572,8 @@ thread_sleep (int64_t ticks)
 	enum intr_level old_intr_level;
 	struct thread * current_thread = thread_current();
 
-	printf("sleeping  %d\n",ticks);
-	printf("time now = %d\n",timer_ticks());
+	
+		
 	old_intr_level = intr_disable(); 
 	if(current_thread != idle_thread && ticks > 0)
 	{
@@ -590,14 +593,27 @@ void
 thread_alarm(void)
 {
 	struct list_elem * temp;
+	struct list_elem * end;
 	temp = list_begin(&sleep_list);
 	end = list_end(&sleep_list);
-	
-	while(temp != end)
+  	
+	while(temp == end)
 	{
-		struct thread * temp_thread = list_entry(
-	}
+		struct thread * temp_thread = list_entry(temp, struct thread, elem);
+		int64_t temp_tick = temp_thread -> sleep_tick;
+		if(temp_tick<=timer_ticks())
+		{
+					
+			//list_push_back(&ready_list, temp);
+			thread_unblock(temp_thread);
+			temp = list_remove(temp);
 
+		}
+		else
+		{
+			temp = list_next(temp);
+		}
+	}
 
 }
 								

@@ -82,7 +82,7 @@ timer_ticks (void)
   int64_t t = ticks;
   intr_set_level (old_level);
   barrier ();
-  return t;
+	return t;
   
 }
 
@@ -143,6 +143,8 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+	thread_alarm();
+
   thread_tick ();
 }
 
