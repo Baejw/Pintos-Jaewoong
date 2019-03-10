@@ -325,6 +325,7 @@ thread_yield (void)
 void
 thread_set_priority (int new_priority) 
 {
+	
   thread_current ()->priority = new_priority;
 }
 
@@ -574,12 +575,12 @@ thread_sleep (int64_t ticks)
 	enum intr_level old_intr_level;
 	struct thread * current_thread = thread_current();
 
-	
+//interrupt disabling to aviod data race	
 		
 	old_intr_level = intr_disable(); 
 	if(current_thread != idle_thread && ticks>0)
 	{
-										
+		//printf("name : %s time : %d \n",current_thread->name,ticks);			
 		current_thread->sleep_tick = ticks;
 																
 		list_push_back(&sleep_list, &current_thread -> sleep_elem);
@@ -587,7 +588,7 @@ thread_sleep (int64_t ticks)
 		thread_block();
 	}
 
-	intr_set_level (old_intr_level);
+	intr_set_level (old_intr_level); //get interrupt state back
 
 }
 
@@ -602,20 +603,26 @@ thread_alarm(void)
 	while(temp != end)
 	{
 		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
-		int64_t temp_tick = temp_thread -> sleep_tick;
-		if(temp_tick<timer_ticks())
+		
+		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
-					
+		  //printf("name : %s tick : %d\n",temp_thread->name,temp_tick);			
 			//list_push_back(&ready_list, temp);
 			thread_unblock(temp_thread);
 			temp = list_remove(temp);
 
 		}
+
 		else
 		{
 			temp = list_next(temp);
 		}
 	}
 
-}
-								
+}/*
+bool compare_priority(list_elem *a, list_elem *b, void *aux)
+{
+	struct thread * a_thread = list_entry(a, struct thread, elem);
+	struct thread * b_thread = list_entry(b, struct thread, elem);
+	return a_thread->priority > b_thread->priority;
+}*/
