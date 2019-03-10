@@ -238,7 +238,7 @@ thread_unblock (struct thread *t)
 {
   enum intr_level old_level;
   	
-	//printf("%s %d %d\n",t->name,t->status,is_thread(t));
+	printf("%s %d %d\n",t->name,t->status,is_thread(t));
 
   ASSERT (is_thread (t));
 
@@ -443,14 +443,13 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-	printf("name : %s\n",name);
+
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-	t->sleep_tick = 0;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -573,7 +572,7 @@ thread_sleep (int64_t ticks)
 	enum intr_level old_intr_level;
 	struct thread * current_thread = thread_current();
 
-	
+  printf("sleeping name : %s\n",current_thread->name);	
 		
 	old_intr_level = intr_disable(); 
 	if(current_thread != idle_thread && ticks > 0)
