@@ -104,6 +104,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+	
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -443,7 +444,7 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-	printf("name : %s\n",name);
+	//printf("name : %s\n",name);
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
@@ -576,12 +577,12 @@ thread_sleep (int64_t ticks)
 	
 		
 	old_intr_level = intr_disable(); 
-	if(current_thread != idle_thread && ticks > 0)
+	if(current_thread != idle_thread && ticks>0)
 	{
 										
 		current_thread->sleep_tick = ticks;
 																
-		list_push_back(&sleep_list, &current_thread -> elem);
+		list_push_back(&sleep_list, &current_thread -> sleep_elem);
 			 
 		thread_block();
 	}
@@ -600,9 +601,9 @@ thread_alarm(void)
   	
 	while(temp != end)
 	{
-		struct thread * temp_thread = list_entry(temp, struct thread, elem);
+		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
 		int64_t temp_tick = temp_thread -> sleep_tick;
-		if(temp_tick<=timer_ticks())
+		if(temp_tick<timer_ticks())
 		{
 					
 			//list_push_back(&ready_list, temp);
