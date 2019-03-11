@@ -62,7 +62,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
-
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -74,7 +73,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-
+bool compare_priority (struct list_elem *, struct list_elem *, void *);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -206,7 +205,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-  
+	thread_yield();  
   return tid;
 }
 
@@ -246,7 +245,8 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
 	
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+	void * aux = NULL;
+  list_insert_ordered (&ready_list, &t->elem, compare_priority, aux);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -314,8 +314,12 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (curr != idle_thread) 
-    list_push_back (&ready_list, &curr->elem);
+  if (curr != idle_thread)
+	{	
+		void * aux = NULL;
+		list_insert_ordered (&ready_list, &curr->elem, compare_priority, aux);
+	}
+		// list_push_back (&ready_list, &curr->elem);
   curr->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -325,8 +329,13 @@ thread_yield (void)
 void
 thread_set_priority (int new_priority) 
 {
-	
-  thread_current ()->priority = new_priority;
+  int old_priority = thread_current()->priority;
+	thread_current ()->priority = new_priority;
+	if(old_priority > new_priority)
+	{
+		thread_yield();	
+	}
+  
 }
 
 /* Returns the current thread's priority. */
@@ -619,10 +628,13 @@ thread_alarm(void)
 		}
 	}
 
-}/*
-bool compare_priority(list_elem *a, list_elem *b, void *aux)
+}
+
+bool 
+compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 {
 	struct thread * a_thread = list_entry(a, struct thread, elem);
 	struct thread * b_thread = list_entry(b, struct thread, elem);
+	ASSERT(is_thread(a_thread) && is_thread(b_thread));
 	return a_thread->priority > b_thread->priority;
-}*/
+}
