@@ -167,13 +167,13 @@ init_pool (struct pool *p, void *base, size_t page_cnt, const char *name)
   if (bm_pages > page_cnt)
     PANIC ("Not enough memory in %s for bitmap.", name);
   page_cnt -= bm_pages;
-
+	
   printf ("%zu pages available in %s.\n", page_cnt, name);
 
   /* Initialize the pool. */
   lock_init (&p->lock);
   p->used_map = bitmap_create_in_buf (page_cnt, base, bm_pages * PGSIZE);
-  p->base = base + bm_pages * PGSIZE;
+	p->base = base + bm_pages * PGSIZE;
 }
 
 /* Returns true if PAGE was allocated from POOL,

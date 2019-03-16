@@ -205,7 +205,7 @@ lock_acquire (struct lock *lock)
 	{
 		lock->priority = current_thread->priority;
 	}
-	list_insert_ordered(&current_thread->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
+//	list_insert_ordered(&current_thread->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
 	if(lock_thread != NULL)
 	{
 		if(lock_thread->priority < current_thread->priority)
@@ -220,7 +220,12 @@ lock_acquire (struct lock *lock)
 	}
 
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = thread_current ();	
+	if(&current_thread->lock_list!=NULL)
+	{
+		//list_push_back(&current_thread->lock_list, &lock->lock_elem);
+		list_insert_ordered(&lock->holder->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
+	}
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -255,6 +260,7 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 	struct thread * current_thread = thread_current();
+	list_remove(&lock->lock_elem);
 	if(current_thread->o_priority!=-1)
 	{
 		current_thread->priority = current_thread->o_priority;
