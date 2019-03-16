@@ -144,6 +144,15 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+	
+	if(thread_mlfqs)
+	{
+		if(timer_ticks()%TIMER_FREQ ==0)
+			thread_update_load();
+		if(timer_ticks()%4==0)
+			thread_update_priority();
+	}
+	
 	thread_alarm();
 
   thread_tick ();

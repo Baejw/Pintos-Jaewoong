@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -31,6 +32,12 @@ static struct list ready_list;
 
 /* List of sleeping thread list. */
 static struct list sleep_list;
+
+/* List of all thread */
+static struct list LIST;
+
+/* load average */
+static int load_avg=0;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -98,6 +105,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&sleep_list);
+	list_init (&LIST);
 	/* Set up a thread structure for the running thread. */
 //  printf("c\n");
 	initial_thread = running_thread ();
@@ -334,7 +342,10 @@ thread_set_priority (int new_priority)
 {
   int old_priority = thread_current()->priority;
 	struct thread * current_thread = thread_current();
-
+	if(thread_mlfqs)
+	{
+		return;
+	}
 	if(current_thread->o_priority==-1)
 	{
 		current_thread->priority = new_priority;
@@ -369,16 +380,18 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  
+	/* Not yet implemented. */
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
+	return round_convert_to_int(mul_int_fixed(100, load_avg));
   /* Not yet implemented. */
-  return 0;
+  
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -386,7 +399,54 @@ int
 thread_get_recent_cpu (void) 
 {
   /* Not yet implemented. */
-  return 0;
+  return round_convert_to_int(thread_current()->recent_cpu*100);
+}
+
+void
+thread_update_load(void)
+{
+	int num_thread = list_size(&ready_list);
+	
+	if(thread_current()!=idle_thread)
+		num_thread += 1;
+	
+	load_avg = div_fixed_int(add_int_fixed(num_thread, mul_int_fixed(59, load_avg)),60);
+	
+	struct list_elem * temp = list_begin(&LIST);
+	struct list_elem * end = list_end(&LIST);
+	while(temp != end)
+	{
+		struct thread * temp_th =  list_entry(temp, struct thread, elem);
+		int cpu = temp_th->recent_cpu;
+
+		cpu = add_int_fixed(thread_get_nice(),mul_fixed_fixed(div_fixed_fixed(2*load_avg, add_int_fixed(1, 2*load_avg)), cpu));
+		temp_th->recent_cpu = cpu;
+		temp = list_next(temp);
+	}
+	
+
+}
+
+void
+thread_update_priority(void)
+{
+	struct list_elem * temp = list_begin(&LIST);
+	struct list_elem * end = list_end(&LIST);
+	int max = PRI_MIN;
+	while(temp != end)
+	{
+		struct thread * temp_th = list_entry(temp, struct thread, elem);
+
+		int pri = sub_int_fixed(PRI_MAX, sub_fixed_int(div_fixed_int(temp_th->recent_cpu, 4), temp_th->nice*2));
+		pri = round_convert_to_int(pri);
+		if(pri>max)
+			max = pri;
+		temp_th->priority = pri;
+		temp = list_next(temp);
+	}
+
+	if(max > thread_current()->priority)
+		intr_yield_on_return();
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -472,11 +532,17 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
-  t->o_priority = -1;
+  if(!thread_mlfqs)
+	{
+		t->priority = priority;
+	}
+	t->o_priority = -1;
+	t->nice = running_thread()->nice;
+	t->recent_cpu = running_thread()->recent_cpu;
 	list_init(&t->lock_list);
 	t->magic = THREAD_MAGIC;
 	t->sleep_tick = 0;
+	list_push_back(&LIST, &t->elem);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
