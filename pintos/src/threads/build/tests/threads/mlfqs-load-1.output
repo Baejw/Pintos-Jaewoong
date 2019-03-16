@@ -1,4 +1,4 @@
-Writing command line to /tmp/c5cfKhCOKn.dsk...
+Writing command line to /tmp/IjEcaeHA1I.dsk...
 warning: can't find squish-pty, so terminal input will fail
 bochs -q
 Kernel command line: -q -mlfqs run mlfqs-load-1
@@ -10,19 +10,15 @@ Boot complete.
 Executing 'mlfqs-load-1':
 (mlfqs-load-1) begin
 (mlfqs-load-1) spinning for up to 45 seconds, please wait...
-Interrupt 0000 (#DE Divide Error) at eip=0xc0103a6b
- cr2=00000000 error=00000000
- eax=00000080 ebx=00000023 ecx=00000000 edx=00000000
- esi=00000000 edi=c010ca18 esp=c002fee8 ebp=c002fec8
- cs=0008 ds=0010 es=0010 ss=0a4d
-Kernel PANIC at ../../threads/interrupt.c:373 in intr_handler(): Unexpected interrupt
-Call stack: 0xc0107729 0xc0101a79 0xc0101b6f 0xc0103a6b 0xc0100a4d 0xc010b328 0xc010965b 0xc01000a0 0xc0100641.
-The `backtrace' program can make call stacks useful.
-Read "Backtraces" in the "Debugging Tools" chapter
-of the Pintos documentation for more information.
-Timer: 35 ticks
-Thread: 0 idle ticks, 35 kernel ticks, 0 user ticks
-Console: 956 characters output
+(mlfqs-load-1) load average rose to 0.5 after 41 seconds
+(mlfqs-load-1) sleeping for another 10 seconds, please wait...
+(mlfqs-load-1) load average fell back below 0.5 (to 0.43)
+(mlfqs-load-1) PASS
+(mlfqs-load-1) end
+Execution of 'mlfqs-load-1' complete.
+Timer: 5237 ticks
+Thread: 1000 idle ticks, 4240 kernel ticks, 0 user ticks
+Console: 646 characters output
 Keyboard: 0 keys pressed
 Powering off...
 ========================================================================

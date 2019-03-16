@@ -402,6 +402,7 @@ int
 thread_get_load_avg (void) 
 {
 	//printf("hell\n");
+	timer_print_stats();
 	return round_convert_to_int(mul_int_fixed(100, load_avg));
   /* Not yet implemented. */
   
@@ -701,18 +702,19 @@ thread_sleep (int64_t ticks)
 
 }
 
-void
+int
 thread_alarm(void)
 {
 	struct list_elem * temp;
 	struct list_elem * end;
 	temp = list_begin(&sleep_list);
 	end = list_end(&sleep_list);
-  	
+	int waker = 0;  	
 	while(temp != end)
 	{
 		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
-		
+		int tem = temp_thread->sleep_tick;
+
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
 		  //printf("name : %s tick : %d\n",temp_thread->name,temp_tick);			
@@ -723,11 +725,15 @@ thread_alarm(void)
 		}
 
 		else
-		{
+		{	
+			if(waker==0)
+				waker = tem;
+			else if(waker>tem)
+				waker = tem;
 			temp = list_next(temp);
 		}
 	}
-
+	return waker;
 }
 
 bool 

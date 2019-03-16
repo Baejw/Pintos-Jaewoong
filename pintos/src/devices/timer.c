@@ -20,6 +20,7 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
+static int wake_tick=0;
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
@@ -154,8 +155,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 			thread_update_priority();
 	
 	}
-	
-	thread_alarm();
+	if(ticks > wake_tick)	
+		wake_tick = thread_alarm();
 
   thread_tick ();
 }

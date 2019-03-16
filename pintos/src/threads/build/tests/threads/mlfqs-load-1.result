@@ -1,13 +1,1 @@
-FAIL
-Kernel panic in run: PANIC at ../../threads/interrupt.c:373 in intr_handler(): Unexpected interrupt
-Call stack: 0xc0107729 0xc0101a79 0xc0101b6f 0xc0103a6b 0xc0100a4d 0xc010b328 0xc010965b 0xc01000a0 0xc0100641
-Translation of call stack:
-0xc0107729: debug_panic (.../../lib/kernel/debug.c:34)
-0xc0101a79: intr_handler (..../threads/interrupt.c:377)
-0xc0101b6f: intr_entry (threads/intr-stubs.S:38)
-0xc0103a6b: round_convert_to_int (.../threads/fixed_point.c:25)
-0xc0100a4d: thread_get_load_avg (..../../threads/thread.c:407)
-0xc010b328: test_mlfqs_load_1 (...threads/mlfqs-load-1.c:31)
-0xc010965b: run_test (.../tests/threads/tests.c:57)
-0xc01000a0: run_task (.../../../threads/init.c:271)
-0xc0100641: run_actions (.../../../threads/init.c:320)
+PASS

@@ -16,7 +16,7 @@ pass tests/threads/priority-preempt
 pass tests/threads/priority-sema
 pass tests/threads/priority-condvar
 pass tests/threads/priority-donate-chain
-FAIL tests/threads/mlfqs-load-1
+pass tests/threads/mlfqs-load-1
 FAIL tests/threads/mlfqs-load-60
 FAIL tests/threads/mlfqs-load-avg
 FAIL tests/threads/mlfqs-recent-1
