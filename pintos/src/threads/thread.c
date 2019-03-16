@@ -333,11 +333,21 @@ void
 thread_set_priority (int new_priority) 
 {
   int old_priority = thread_current()->priority;
-	thread_current ()->priority = new_priority;
-	if(old_priority > new_priority)
+	struct thread * current_thread = thread_current();
+
+	if(current_thread->o_priority==-1)
 	{
-		thread_yield();	
+		current_thread->priority = new_priority;
+		if(old_priority > new_priority)
+		{
+			thread_yield();
+		}
 	}
+	else
+	{
+		current_thread->o_priority = new_priority;
+	}
+		
   
 }
 

@@ -75,6 +75,7 @@ sema_down (struct semaphore *sema)
 	}
 	sema->value--;
 	intr_set_level (old_level);
+	thread_yield();
 }
 
 /* Down or "P" operation on a semaphore, but only if the
@@ -115,11 +116,16 @@ sema_up (struct semaphore *sema)
 	ASSERT (sema != NULL);
 
 	old_level = intr_disable ();
-	if (!list_empty (&sema->waiters)) 
+	
+	if (!list_empty (&sema->waiters))
+	{
+		list_sort(&sema->waiters, compare_priority, NULL);
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
+	}
 	sema->value++;
 	intr_set_level (old_level);
+	thread_yield();
 }
 
 static void sema_test_helper (void *sema_);
@@ -268,6 +274,7 @@ lock_acquire (struct lock *lock)
 		//list_push_back(&current_thread->lock_list, &lock->lock_elem);
 		list_insert_ordered(&current_thread->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
 	}
+	
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -347,7 +354,8 @@ struct semaphore_elem
   {
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
-  };
+  	int	priority;
+	};
 
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
@@ -384,14 +392,15 @@ void
 cond_wait (struct condition *cond, struct lock *lock) 
 {
   struct semaphore_elem waiter;
-
+	waiter.priority = thread_get_priority();
   ASSERT (cond != NULL);
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (lock_held_by_current_thread (lock));
   
   sema_init (&waiter.semaphore, 0);
-  list_push_back (&cond->waiters, &waiter.elem);
+ 	list_insert_ordered (&cond->waiters, &waiter.elem, compare_wait_priority, NULL);
+	// list_push_back (&cond->waiters, &waiter.elem);
   lock_release (lock);
   sema_down (&waiter.semaphore);
   lock_acquire (lock);
@@ -439,4 +448,12 @@ compare_lock_priority (struct list_elem * a, struct list_elem * b, void * aux UN
 	struct lock * a_lock = list_entry(a, struct lock, lock_elem);
 	struct lock * b_lock = list_entry(b, struct lock, lock_elem);
 	return a_lock->priority > b_lock->priority;
+}
+
+bool
+compare_wait_priority (struct list_elem * a, struct list_elem * b, void * aux UNUSED)
+{
+	struct semaphore_elem * s_a = list_entry(a, struct semaphore_elem, elem);
+	struct semaphore_elem * s_b = list_entry(b, struct semaphore_elem, elem);
+	return s_a->priority > s_b->priority;
 }
