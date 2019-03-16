@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SHIFT 1<<14
+#define SHIFT (1<<14)
 
 int											
 convert_to_fixed (int n)  // convert integer to fixed point number
@@ -14,19 +14,20 @@ convert_to_fixed (int n)  // convert integer to fixed point number
 int					
 convert_to_int (int f)  // convert fixed point number to integer(round down)
 {
-	return f * SHIFT;
+	return f / SHIFT;
 }
 
 int
 round_convert_to_int (int f) // covert fixed to integer(rounding)
 {
+	
 	if(f>=0)
 	{
-		return (f + SHIFT/2) / f;
+		return (f + SHIFT/2) / SHIFT;
 	}
 	else
 	{
-		return (f - SHIFT/2) / f;
+		return (f - SHIFT/2) / SHIFT;
 	}
 }
 

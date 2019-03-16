@@ -1,0 +1,32 @@
+Writing command line to /tmp/QupAbiVk15.dsk...
+warning: can't find squish-pty, so terminal input will fail
+bochs -q
+Kernel command line: -q -mlfqs run mlfqs-recent-1
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  204,600 loops/s.
+Boot complete.
+Executing 'mlfqs-recent-1':
+(mlfqs-recent-1) begin
+(mlfqs-recent-1) Sleeping 10 seconds to allow recent_cpu to decay, please wait...
+Interrupt 0000 (#DE Divide Error) at eip=0xc0103a6b
+ cr2=00000000 error=00000000
+ eax=00000080 ebx=000003c3 ecx=00000000 edx=00000000
+ esi=00000000 edi=c010ca18 esp=c002fee8 ebp=c002fec8
+ cs=0008 ds=0010 es=0010 ss=0937
+Kernel PANIC at ../../threads/interrupt.c:373 in intr_handler(): Unexpected interrupt
+Call stack: 0xc0107729 0xc0101a79 0xc0101b6f 0xc0103a6b 0xc0100937 0xc010b9e4 0xc010965b 0xc01000a0 0xc0100641.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 1001 ticks
+Thread: 963 idle ticks, 38 kernel ticks, 0 user ticks
+Console: 987 characters output
+Keyboard: 0 keys pressed
+Powering off...
+========================================================================
+                       Bochs x86 Emulator 2.6.2
+                Built from SVN snapshot on May 26, 2013
+                  Compiled on Mar  9 2019 at 19:58:36
+========================================================================

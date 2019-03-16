@@ -95,6 +95,7 @@ struct thread
 		/* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 		struct list_elem sleep_elem;        /* List of sleeping thread */
+		struct list_elem ELEM;							/* list element of created thread*/
 		struct list lock_list;							/* LIst of lock that current have */
 		struct lock * locker;									/* Lock which waiting for */
 #ifdef USERPROG

@@ -29,7 +29,8 @@ test_mlfqs_load_1 (void)
   for (;;) 
     {
       load_avg = thread_get_load_avg ();
-      ASSERT (load_avg >= 0);
+      //msg("hellop\n");
+			ASSERT (load_avg >= 0);
       elapsed = timer_elapsed (start_time) / TIMER_FREQ;
       if (load_avg > 100)
         fail ("load average is %d.%02d "

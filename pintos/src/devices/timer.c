@@ -147,10 +147,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	
 	if(thread_mlfqs)
 	{
+		thread_current()->recent_cpu = add_int_fixed(1, thread_current()->recent_cpu);
 		if(timer_ticks()%TIMER_FREQ ==0)
 			thread_update_load();
 		if(timer_ticks()%4==0)
 			thread_update_priority();
+	
 	}
 	
 	thread_alarm();
