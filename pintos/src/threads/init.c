@@ -73,13 +73,14 @@ main (void)
 
   /* Break command line into arguments and parse options. */
   argv = read_command_line ();
-  argv = parse_options (argv);
-
+	argv = parse_options (argv);
+//	printf("a\n");
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
   thread_init ();
+//	printf("b\n");
   console_init ();  
-
+//	printf("h\n");
   /* Greet user. */
   printf ("Pintos booting with %'zu kB RAM...\n", ram_pages * PGSIZE / 1024);
 
@@ -217,7 +218,7 @@ read_command_line (void)
     else
       printf (" '%s'", argv[i]);
   printf ("\n");
-
+	
   return argv;
 }
 

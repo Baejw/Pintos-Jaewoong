@@ -200,12 +200,52 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 	
 	struct thread * lock_thread = lock->holder;
+	struct thread * subject_thread = thread_current();
 	struct thread * current_thread = thread_current();
+	struct lock * block = lock;
+	
+	current_thread->locker = lock;
+	
+	if(lock_thread == NULL)
+	{
+		block->priority = current_thread->priority;
+	}
+
+	while(lock_thread != NULL)
+	{
+		//printf("aa\n");
+		if(block->priority < subject_thread->priority)
+		{
+			block->priority = subject_thread->priority;
+		}
+
+		if(lock_thread->priority < subject_thread->priority)
+		{
+			if(lock_thread->o_priority==-1)
+			{
+				lock_thread->o_priority = lock_thread->priority;
+			}
+			lock_thread->priority = subject_thread->priority;
+		}
+		//printf("bb\n");
+		
+		block = lock_thread->locker;
+		if(block==NULL)
+		{
+			break;
+		}
+		subject_thread = lock_thread;	
+		lock_thread = block->holder;
+	}
+	//printf("cc\n");
+
+
+	/*
 	if(lock->priority < current_thread->priority)
 	{
 		lock->priority = current_thread->priority;
 	}
-//	list_insert_ordered(&current_thread->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
+
 	if(lock_thread != NULL)
 	{
 		if(lock_thread->priority < current_thread->priority)
@@ -218,13 +258,15 @@ lock_acquire (struct lock *lock)
 						
 		}
 	}
-
+`	*/
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();	
+  lock->holder = current_thread;
+	current_thread->locker = NULL;
+	
 	if(&current_thread->lock_list!=NULL)
 	{
 		//list_push_back(&current_thread->lock_list, &lock->lock_elem);
-		list_insert_ordered(&lock->holder->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
+		list_insert_ordered(&current_thread->lock_list, &lock->lock_elem, compare_lock_priority, NULL);
 	}
 }
 
@@ -261,11 +303,28 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 	struct thread * current_thread = thread_current();
 	list_remove(&lock->lock_elem);
-	if(current_thread->o_priority!=-1)
+	
+	if(list_empty(&current_thread->lock_list))
 	{
-		current_thread->priority = current_thread->o_priority;
-		current_thread->o_priority = -1;
-		
+		if(current_thread->o_priority!=-1)
+		{	
+			current_thread->priority = current_thread->o_priority;
+			current_thread->o_priority = -1;
+		}
+	}
+	else
+	{
+		list_sort(&current_thread->lock_list, compare_lock_priority, NULL);
+		struct lock * big_lock = list_entry(list_begin(&current_thread->lock_list), struct lock, lock_elem);
+		if(current_thread->o_priority < big_lock->priority)
+		{
+			current_thread->priority = big_lock->priority;
+		}
+		else
+		{
+			current_thread->priority = current_thread->o_priority;
+			current_thread->o_priority = -1;
+		}		
 	}
   lock->holder = NULL;
 	sema_up (&lock->semaphore);

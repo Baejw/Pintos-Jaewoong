@@ -99,9 +99,12 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&sleep_list);
 	/* Set up a thread structure for the running thread. */
-  initial_thread = running_thread ();
-  init_thread (initial_thread, "main", PRI_DEFAULT);
-  initial_thread->status = THREAD_RUNNING;
+//  printf("c\n");
+	initial_thread = running_thread ();
+//  printf("d\n");
+	init_thread (initial_thread, "main", PRI_DEFAULT);
+//  printf("e\n");
+	initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 	
 }
@@ -568,11 +571,12 @@ allocate_tid (void)
 {
   static tid_t next_tid = 1;
   tid_t tid;
-
+//	printf("hell\n");
   lock_acquire (&tid_lock);
-  tid = next_tid++;
+//  printf("heqq\n");
+	tid = next_tid++;
   lock_release (&tid_lock);
-
+//	printf("how\n");
   return tid;
 }
 
