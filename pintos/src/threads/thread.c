@@ -106,6 +106,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&sleep_list);
 	list_init (&LIST);
+	load_avg = 0;
 	/* Set up a thread structure for the running thread. */
 //  printf("c\n");
 	initial_thread = running_thread ();
@@ -378,13 +379,9 @@ thread_set_nice (int nice UNUSED)
   struct thread * cur_thread = thread_current();
 	cur_thread->nice = nice;
 	int pri = sub_int_fixed(PRI_MAX, add_int_fixed(nice*2, div_fixed_int(nice, 4)));
-	if(pri>cur_thread->priority)
-	{
-		cur_thread->priority = pri;
-		thread_yield();
-	}
-	else
-		cur_thread->priority = pri;
+	cur_thread -> priority = pri;
+	
+	thread_yield();
 	/* Not yet implemented. */
 }
 
@@ -402,7 +399,7 @@ int
 thread_get_load_avg (void) 
 {
 	//printf("hell\n");
-	timer_print_stats();
+	//timer_print_stats();
 	return round_convert_to_int(mul_int_fixed(100, load_avg));
   /* Not yet implemented. */
   
@@ -455,12 +452,13 @@ thread_update_priority(void)
 		pri = round_convert_to_int(pri);
 		//printf("name: %s, cpu: %d, load: %d, pri: %d\n",temp_th->name, temp_th->recent_cpu,load_avg, pri);
 		if(pri>PRI_MAX)
-			pri=PRI_MAX;
-		if(pri>max)
-			max = pri;
-		temp_th->priority = 31;
+			pri = PRI_MAX;
+		if(pri<PRI_MIN)
+			pri = PRI_MIN;
+		temp_th->priority = pri;
 		temp = list_next(temp);
 	}
+	list_sort(&ready_list, compare_priority, NULL);
 	//printf("max %d\n",max);
 	if(max > thread_current()->priority)
 		intr_yield_on_return();
