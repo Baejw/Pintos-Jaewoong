@@ -109,11 +109,8 @@ thread_init (void)
 	list_init (&LIST);
 	load_avg = 0;
 	/* Set up a thread structure for the running thread. */
-//  printf("c\n");
 	initial_thread = running_thread ();
-//  printf("d\n");
 	init_thread (initial_thread, "main", PRI_DEFAULT);
-//  printf("e\n");
 	initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 	
@@ -260,8 +257,6 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
-  	
-	//printf("%s %d %d\n",t->name,t->status,is_thread(t));
 
   ASSERT (is_thread (t));
 
@@ -392,7 +387,6 @@ thread_set_nice (int nice UNUSED)
 	int pri = sub_int_fixed(PRI_MAX, add_int_fixed(nice*2, div_fixed_int(nice, 4)));
 	cur_thread -> priority = pri;
 	
-	//thread_yield();
 	/* Not yet implemented. */
 }
 
@@ -568,12 +562,16 @@ init_thread (struct thread *t, const char *name, int priority)
 	
 	if(thread_mlfqs)
 	{
-		t->nice = 0;
+
 		if(t==initial_thread)
+		{	
 			t->recent_cpu=0;
+			t->nice = 0;
+		}
 		else
 		{
 			t->recent_cpu = thread_current()->recent_cpu;
+			t->nice = thread_current()->nice;
 		}
 	}
 	list_init(&t->lock_list);
@@ -735,7 +733,7 @@ thread_alarm(void)
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
 		  //printf("name : %s tick : %d\n",temp_thread->name,temp_tick);			
-			//list_push_back(&ready_list, temp);
+			
 			thread_unblock(temp_thread);
 			temp = list_remove(temp);
 
