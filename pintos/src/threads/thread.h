@@ -139,8 +139,14 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 void thread_sleep (int64_t ticks);
-int thread_alarm (void);
+int thread_alarm (int);
 bool compare_priority (struct list_elem *, struct list_elem *,void *);
-void thread_update_load(void);
+bool compare_sleep (struct list_elem *, struct list_elem *, void *);
+bool compare (struct list_elem *, struct list_elem *, void *);
+void thread_update_cpu(void);
 void thread_update_priority(void);
+void calculate_load_avg(void);
+void calculate_cpu (struct thread *);
+void calculate_priority(struct thread *);
+
 #endif

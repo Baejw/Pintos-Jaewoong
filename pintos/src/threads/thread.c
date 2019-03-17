@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed_point.h"
+#include "threads/fixed.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -106,6 +107,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&sleep_list);
 	list_init (&LIST);
+	
 	/* Set up a thread structure for the running thread. */
 //  printf("c\n");
 	initial_thread = running_thread ();
@@ -114,7 +116,7 @@ thread_init (void)
 //  printf("e\n");
 	initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-	
+	load_avg = 0;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -217,7 +219,8 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 	thread_yield();  
-  return tid;
+  load_avg = 0;
+	return tid;
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -377,14 +380,9 @@ thread_set_nice (int nice UNUSED)
 {
   struct thread * cur_thread = thread_current();
 	cur_thread->nice = nice;
-	int pri = sub_int_fixed(PRI_MAX, add_int_fixed(nice*2, div_fixed_int(nice, 4)));
-	if(pri>cur_thread->priority)
-	{
-		cur_thread->priority = pri;
-		thread_yield();
-	}
-	else
-		cur_thread->priority = pri;
+	//cur_thread->priority = -1;
+	calculate_priority(cur_thread);	
+	thread_yield();	
 	/* Not yet implemented. */
 }
 
@@ -402,8 +400,9 @@ int
 thread_get_load_avg (void) 
 {
 	//printf("hell\n");
-	timer_print_stats();
-	return round_convert_to_int(mul_int_fixed(100, load_avg));
+	
+	//timer_print_stats();
+	return round_convert_to_int(load_avg*100);
   /* Not yet implemented. */
   
 }
@@ -417,53 +416,33 @@ thread_get_recent_cpu (void)
 }
 
 void
-thread_update_load(void)
+thread_update_cpu(void)
 {
-	int num_thread = list_size(&ready_list);
-	
-	if(thread_current()!=idle_thread)
-		num_thread += 1;
-	
-	load_avg = div_fixed_int(add_int_fixed(num_thread, mul_int_fixed(59, load_avg)),60);
-	
 	struct list_elem * temp = list_begin(&LIST);
-	struct list_elem * end = list_end(&LIST);
-	while(temp != end)
+	struct thread * temp_th;
+	while(temp != list_end(&LIST))
 	{
-		struct thread * temp_th =  list_entry(temp, struct thread, ELEM);
-		int cpu = temp_th->recent_cpu;
-
-		cpu = add_int_fixed(thread_get_nice(),mul_fixed_fixed(div_fixed_fixed(2*load_avg, add_int_fixed(1, 2*load_avg)), cpu));
-		temp_th->recent_cpu = cpu;
+		temp_th =  list_entry(temp, struct thread, ELEM);
+		calculate_cpu(temp_th);
 		temp = list_next(temp);
 	}
-	
-
 }
 
 void
 thread_update_priority(void)
 {
 	struct list_elem * temp = list_begin(&LIST);
-	struct list_elem * end = list_end(&LIST);
+	struct thread * temp_th;
 	int max = PRI_MIN;
-	while(temp != end)
+	while(temp != list_end(&LIST))
 	{
-		struct thread * temp_th = list_entry(temp, struct thread, ELEM);
-
-		int pri = sub_int_fixed(PRI_MAX, add_int_fixed(temp_th->nice*2 ,div_fixed_int(temp_th->recent_cpu, 4)));
-		pri = round_convert_to_int(pri);
-		//printf("name: %s, cpu: %d, load: %d, pri: %d\n",temp_th->name, temp_th->recent_cpu,load_avg, pri);
-		if(pri>PRI_MAX)
-			pri=PRI_MAX;
-		if(pri>max)
-			max = pri;
-		temp_th->priority = 31;
+		temp_th = list_entry(temp, struct thread, ELEM);
+		calculate_priority(temp_th);
 		temp = list_next(temp);
 	}
-	//printf("max %d\n",max);
-	if(max > thread_current()->priority)
-		intr_yield_on_return();
+	list_sort(&ready_list, compare_priority,NULL);
+//	if(max > thread_current()->priority)
+	//	intr_yield_on_return();
 }
 
 
@@ -551,14 +530,20 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   
-	t->priority = priority;
 	
+	if(thread_mlfqs)
+	{
+		t->nice = 0;
+		if(t==initial_thread)
+			t->recent_cpu = 0;
+		else
+			t->recent_cpu = thread_get_recent_cpu();
+	}
+	else
+		t->priority = priority;
 	
 	list_push_back(&LIST, &t->ELEM);
-	
 	t->o_priority = -1;
-	t->nice = running_thread()->nice;
-	t->recent_cpu = running_thread()->recent_cpu;
 	list_init(&t->lock_list);
 	t->magic = THREAD_MAGIC;
 	t->sleep_tick = 0;
@@ -688,12 +673,13 @@ thread_sleep (int64_t ticks)
 //interrupt disabling to aviod data race	
 		
 	old_intr_level = intr_disable(); 
-	if(current_thread != idle_thread && ticks>0)
+	if(ticks>0)
 	{
-		//printf("name : %s time : %d \n",current_thread->name,ticks);			
+//		printf("name : %s time : %d pri: %d, num_th: %d\n",current_thread->name,ticks, current_thread->priority, list_size(&LIST));			
 		current_thread->sleep_tick = ticks;
-																
-		list_push_back(&sleep_list, &current_thread -> sleep_elem);
+			
+		//list_push_back(&sleep_list, &current_thread->sleep_elem);
+		list_insert_ordered(&sleep_list, &current_thread -> sleep_elem, compare_sleep, NULL);
 			 
 		thread_block();
 	}
@@ -703,37 +689,52 @@ thread_sleep (int64_t ticks)
 }
 
 int
-thread_alarm(void)
+thread_alarm(int ticks)
 {
+	if(list_empty(&sleep_list))
+		return 0;
+	enum intr_level old_level;
 	struct list_elem * temp;
 	struct list_elem * end;
 	temp = list_begin(&sleep_list);
 	end = list_end(&sleep_list);
-	int waker = 0;  	
+
+	while(temp != end)
+	{
+		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
+		if(temp_thread->sleep_tick <= ticks)
+		{
+			thread_unblock(temp_thread);
+			temp = list_remove(temp);
+		}
+		else
+		{
+			return temp_thread->sleep_tick;
+		}
+	}
+/*	
 	while(temp != end)
 	{
 		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
 		int tem = temp_thread->sleep_tick;
-
+		old_level = intr_disable();
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
+			
 		  //printf("name : %s tick : %d\n",temp_thread->name,temp_tick);			
 			//list_push_back(&ready_list, temp);
 			thread_unblock(temp_thread);
 			temp = list_remove(temp);
-
+			
 		}
-
 		else
 		{	
-			if(waker==0)
-				waker = tem;
-			else if(waker>tem)
-				waker = tem;
 			temp = list_next(temp);
 		}
+		intr_set_level(old_level);
 	}
-	return waker;
+	*/
+	return 0;
 }
 
 bool 
@@ -743,4 +744,57 @@ compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 	struct thread * b_thread = list_entry(b, struct thread, elem);
 	ASSERT(is_thread(a_thread) && is_thread(b_thread));
 	return a_thread->priority > b_thread->priority;
+}
+
+bool
+compare(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
+{
+	struct thread * a_thread = list_entry(a, struct thread, elem);
+	struct thread * b_thread = list_entry(b, struct thread, elem);
+	return a_thread->priority > b_thread->priority;
+}
+
+bool
+compare_sleep(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
+{
+	struct thread * a_thread = list_entry(a, struct thread, sleep_elem);
+	struct thread * b_thread = list_entry(b, struct thread, sleep_elem);
+	return a_thread->sleep_tick <= b_thread->sleep_tick;
+}
+
+void
+calculate_load_avg(void)
+{
+	int num_th;
+	if(thread_current()!=idle_thread)
+		num_th = list_size(&LIST)+1;
+	else
+		num_th = list_size(&LIST);
+	load_avg = div_fixed_int(add_int_fixed(num_th,mul_int_fixed(59,load_avg)),60);
+	
+	//printf("load : %d, num_th : %d\n",load_avg,num_th);
+}
+
+void 
+calculate_cpu(struct thread * th)
+{
+	if(th==idle_thread)
+		return;
+	int l = 2*load_avg;
+	th->recent_cpu = add_int_fixed(th->nice,mul_fixed_fixed(div_fixed_fixed(l,add_int_fixed(1,l)),th->recent_cpu));
+	
+}
+
+void
+calculate_priority(struct thread * th)
+{
+	if(th==idle_thread)
+		return;
+	int pr = PRI_MAX - round_convert_to_int(th->recent_cpu/4) - (th->nice)*2;
+	if(pr>PRI_MAX)
+		th->priority = PRI_MAX;
+	else if(pr<PRI_MIN)
+		th->priority = PRI_MIN;
+	else
+		th->priority = pr;
 }
