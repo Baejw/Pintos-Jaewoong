@@ -12,6 +12,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed_point.h"
+#include "threads/fixed.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -225,6 +226,8 @@ thread_create (const char *name, int priority,
 		if(pri<priority)
 			thread_yield();
 	}
+	else
+		thread_yield();
 
   return tid;
 }
@@ -389,7 +392,7 @@ thread_set_nice (int nice UNUSED)
 	int pri = sub_int_fixed(PRI_MAX, add_int_fixed(nice*2, div_fixed_int(nice, 4)));
 	cur_thread -> priority = pri;
 	
-	thread_yield();
+	//thread_yield();
 	/* Not yet implemented. */
 }
 
@@ -436,10 +439,10 @@ thread_update_load(void)
 	while(temp != end)
 	{
 		struct thread * temp_th =  list_entry(temp, struct thread, ELEM);
-		int cpu = temp_th->recent_cpu;
-
-		cpu = add_int_fixed(thread_get_nice(),mul_fixed_fixed(div_fixed_fixed(2*load_avg, add_int_fixed(1, 2*load_avg)), cpu));
-		temp_th->recent_cpu = cpu;
+		int l = load_avg*2;
+		temp_th -> recent_cpu = ADD(MUL(DIV(l, ADD(l, 1)),temp_th->recent_cpu), temp_th->nice);
+	//	cpu = add_int_fixed(thread_get_nice(),mul_fixed_fixed(div_fixed_fixed(2*load_avg, add_int_fixed(1, 2*load_avg)), cpu));
+		//temp_th->recent_cpu = cpu;
 		temp = list_next(temp);
 	}
 	
@@ -562,8 +565,17 @@ init_thread (struct thread *t, const char *name, int priority)
 	list_push_back(&LIST, &t->ELEM);
 	
 	t->o_priority = -1;
-	t->nice = running_thread()->nice;
-	t->recent_cpu = running_thread()->recent_cpu;
+	
+	if(thread_mlfqs)
+	{
+		t->nice = 0;
+		if(t==initial_thread)
+			t->recent_cpu=0;
+		else
+		{
+			t->recent_cpu = thread_current()->recent_cpu;
+		}
+	}
 	list_init(&t->lock_list);
 	t->magic = THREAD_MAGIC;
 	t->sleep_tick = 0;
@@ -728,13 +740,8 @@ thread_alarm(void)
 			temp = list_remove(temp);
 
 		}
-
 		else
 		{	
-			if(waker==0)
-				waker = tem;
-			else if(waker>tem)
-				waker = tem;
 			temp = list_next(temp);
 		}
 	}
