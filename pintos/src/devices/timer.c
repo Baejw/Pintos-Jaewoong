@@ -155,8 +155,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 			thread_update_priority();
 	
 	}
-	if(ticks > wake_tick)	
-		wake_tick = thread_alarm();
+	
+	wake_tick = thread_alarm();
 
   thread_tick ();
 }
