@@ -217,7 +217,15 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-	thread_yield();  
+	
+	if(thread_mlfqs)
+	{
+		int pri = thread_current()->priority;
+		t->priority = pri;
+		if(pri<priority)
+			thread_yield();
+	}
+
   return tid;
 }
 
@@ -460,8 +468,7 @@ thread_update_priority(void)
 	}
 	list_sort(&ready_list, compare_priority, NULL);
 	//printf("max %d\n",max);
-	if(max > thread_current()->priority)
-		intr_yield_on_return();
+	
 }
 
 
