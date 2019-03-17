@@ -12,7 +12,6 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed_point.h"
-#include "threads/fixed.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -434,7 +433,7 @@ thread_update_load(void)
 	{
 		struct thread * temp_th =  list_entry(temp, struct thread, ELEM);
 		int l = load_avg*2;
-		temp_th -> recent_cpu = ADD(MUL(DIV(l, ADD(l, 1)),temp_th->recent_cpu), temp_th->nice);
+		temp_th->recent_cpu = ADD(MUL(DIV(l,ADD(l,1)),temp_th->recent_cpu),temp_th->nice);
 	//	cpu = add_int_fixed(thread_get_nice(),mul_fixed_fixed(div_fixed_fixed(2*load_avg, add_int_fixed(1, 2*load_avg)), cpu));
 		//temp_th->recent_cpu = cpu;
 		temp = list_next(temp);
@@ -448,11 +447,12 @@ thread_update_priority(void)
 {
 	struct list_elem * temp = list_begin(&LIST);
 	struct list_elem * end = list_end(&LIST);
-	int max = PRI_MIN;
+	
 	while(temp != end)
 	{
 		struct thread * temp_th = list_entry(temp, struct thread, ELEM);
 
+	
 		int pri = sub_int_fixed(PRI_MAX, add_int_fixed(temp_th->nice*2 ,div_fixed_int(temp_th->recent_cpu, 4)));
 		pri = round_convert_to_int(pri);
 		//printf("name: %s, cpu: %d, load: %d, pri: %d\n",temp_th->name, temp_th->recent_cpu,load_avg, pri);
@@ -728,7 +728,7 @@ thread_alarm(void)
 	while(temp != end)
 	{
 		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
-		int tem = temp_thread->sleep_tick;
+		
 
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{

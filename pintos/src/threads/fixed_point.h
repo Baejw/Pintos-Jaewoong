@@ -3,6 +3,16 @@
 
 #include <stdint.h>
 
+#define SHIFT 1<<(14)
+
+#define ADD(x,n) (x)+(n) * (SHIFT)
+#define SUB(x,n) (x)-(n) * (SHIFT)
+#define CON_FIX(x) (x) * (SHIFT)
+#define CON_INT(x) (x) / (SHIFT)
+#define CON_INT_N(x) ((x)>0 ? ((x)+SHIFT/2)/(SHIFT) : ((x)-SHIFT/2)/(SHIFT))
+#define MUL(x,n) ((int64_t)(x)) * (n) / (SHIFT)
+#define DIV(x,n) ((int64_t)(x)) * (SHIFT) / (n)
+
 int conver_to_fixed (int);
 int covert_to_int (int);
 int round_convert_to_int(int);
