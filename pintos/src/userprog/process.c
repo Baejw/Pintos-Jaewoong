@@ -50,17 +50,28 @@ process_execute (const char *file_name)
 static void
 start_process (void *f_name)
 {
-  char *file_name = f_name;
-  struct intr_frame if_;
+  char * file_name = f_name;
+	char * filename = (char *)malloc(strlen(f_name)+1);
+  char * token, *save_ptr;
+	struct intr_frame if_;
   bool success;
-
+	strlcpy(filename, f_name, strlen(f_name)+1);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
-  if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
+	
+  file_name = strtok_r(file_name, " ", &save_ptr);
+	//setup_argument(if_.esp, save_ptr);
+	if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+	success = load (file_name, &if_.eip, &if_.esp);	
 
+	if(success)
+	{	
+		setup_argument(&if_.esp, filename);
+	}
+	
+	free(filename);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -74,6 +85,72 @@ start_process (void *f_name)
      and jump to it. */
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
+}
+
+void 
+setup_argument(void ** esp, char * filename)
+{
+	char *token, *save_ptr;
+	char *temp_file = (char *)malloc(strlen(filename)+1);
+	
+	ASSERT(temp_file != NULL);
+	
+	strlcpy(temp_file, filename, strlen(filename)+1);
+	
+	int cnt=0;
+	
+	for(token = strtok_r(temp_file, " ",&save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
+		cnt++;
+	
+	char ** arg_ptr = (char **)malloc(sizeof(char *)* cnt);
+	int i = 0;
+	int align_len = 0;
+	
+	for(token = strtok_r(filename, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
+	{
+		arg_ptr[cnt-i-1] = token;	
+		i++;
+		align_len += strlen(token)+1;
+	}
+	
+	align_len = (align_len % 4 == 0 ? 0 : 4 - align_len % 4);
+	
+
+
+	for(i =0; i<cnt; i++)
+	{
+		int len = strlen(arg_ptr[i])+1;
+		
+		* esp -= len;
+	
+		
+		strlcpy(*esp, arg_ptr[i], len);
+		arg_ptr[i] = *esp;
+		
+	}
+	
+	*esp -= align_len;
+	*esp -= 4;
+	**(int **)esp = 0;
+	
+	for(i =0; i<cnt; i++)
+	{
+		*esp -= 4;
+		**(int **)esp = arg_ptr[i];
+	}
+	
+	*esp -= 4;
+	**(int **)esp = *esp+4;
+
+	*esp -= 4;
+	**(int **)esp = cnt;
+		
+	*esp -= 4;
+	**(int **)esp = 0;
+	
+
+	free(arg_ptr);
+	free(temp_file);
 }
 
 /* This is 2016 spring cs330 skeleton code */
@@ -90,7 +167,10 @@ start_process (void *f_name)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  return -1;
+	int i;
+	//for(i=0;i<10000000000;i++)
+	//	i++;
+	return -1;
 }
 
 /* Free the current process's resources. */
@@ -220,7 +300,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
-    goto done;
+		goto done;
   process_activate ();
 
   /* Open executable file. */
@@ -251,7 +331,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       struct Elf32_Phdr phdr;
 
       if (file_ofs < 0 || file_ofs > file_length (file))
-        goto done;
+				goto done;
       file_seek (file, file_ofs);
 
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
@@ -297,9 +377,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
                                  read_bytes, zero_bytes, writable))
                 goto done;
             }
-          else
+          else						
             goto done;
-          break;
+		
+					break;
         }
     }
 
@@ -360,9 +441,9 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
      it then user code that passed a null pointer to system calls
      could quite likely panic the kernel by way of null pointer
      assertions in memcpy(), etc. */
-  if (phdr->p_vaddr < PGSIZE)
+ /* if (phdr->p_vaddr < PGSIZE)
     return false;
-
+*/
   /* It's okay. */
   return true;
 }
