@@ -213,7 +213,10 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+#ifdef USERPROG
 	
+	list_push_back(&thread_current()->children, &t->child);
+#endif
 	if(thread_mlfqs)
 	{
 		int pri = thread_current()->priority;
@@ -558,6 +561,13 @@ init_thread (struct thread *t, const char *name, int priority)
 	list_push_back(&LIST, &t->ELEM);
 	
 	t->o_priority = -1;
+
+#ifdef USERPROG
+	list_init(&t->children);
+	sema_init(&t->sema_wait, 0);
+	t->died = false;
+		
+#endif
 	
 	if(thread_mlfqs)
 	{
@@ -752,4 +762,23 @@ compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 	struct thread * b_thread = list_entry(b, struct thread, elem);
 	ASSERT(is_thread(a_thread) && is_thread(b_thread));
 	return a_thread->priority > b_thread->priority;
+}
+
+struct thread *
+get_thread_tid(tid_t t)
+{
+	struct thread *cur_t = thread_current();
+	struct list_elem *temp, *end;
+	temp = list_begin(&cur_t->children);
+	end = list_end(&cur_t->children);
+
+	while(temp!=end)
+	{	
+		struct thread * temp_t = list_entry(temp, struct thread, child);
+		if(temp_t->tid == t)
+			return temp_t;
+		temp = list_next(temp);
+	}
+	
+	return NULL;
 }

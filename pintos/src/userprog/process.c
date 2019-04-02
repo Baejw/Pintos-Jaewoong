@@ -28,18 +28,22 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  char *fn_copy;
-  tid_t tid;
+  char *fn_copy, *name_copy;
+  char * temp;
+	tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
+  
+	if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
+	name_copy = strtok_r(file_name, " ", &temp);
+	
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (name_copy, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -108,6 +112,7 @@ setup_argument(void ** esp, char * filename)
 	
 	for(token = strtok_r(filename, " ", &save_ptr); token != NULL; token = strtok_r(NULL, " ", &save_ptr))
 	{
+
 		arg_ptr[cnt-i-1] = token;	
 		i++;
 		align_len += strlen(token)+1;
@@ -148,7 +153,7 @@ setup_argument(void ** esp, char * filename)
 	*esp -= 4;
 	**(int **)esp = 0;
 	
-
+  //hex_dump(*esp, *esp, 100, 1);
 	free(arg_ptr);
 	free(temp_file);
 }
@@ -165,12 +170,20 @@ setup_argument(void ** esp, char * filename)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-	int i;
-	//for(i=0;i<10000000000;i++)
-	//	i++;
-	return -1;
+	struct thread * child = get_thread_tid(child_tid);
+	
+	if(child ==NULL)
+		return -1;
+	if(child->died)
+		return -1;
+	sema_down(&child->sema_wait);
+	//printf("a");
+	
+	return child->exit_code;	
+	
+	//return -1;
 }
 
 /* Free the current process's resources. */
@@ -179,11 +192,13 @@ process_exit (void)
 {
   struct thread *curr = thread_current ();
   uint32_t *pd;
-
-  /* Destroy the current process's page directory and switch back
+	sema_up(&curr->sema_wait);
+  
+	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
-  if (pd != NULL) 
+  
+	if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set
          cur->pagedir to NULL before switching page directories,
@@ -196,6 +211,7 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+	
 }
 
 /* Sets up the CPU for running user code in the current
