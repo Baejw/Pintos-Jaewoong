@@ -214,12 +214,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 #ifdef USERPROG
-	
 //	list_push_back(&thread_current()->children, &t->child);
-	//printf("name: %s\n",thread_name());
 	
 #endif
-	//printf("name:%s\n",thread_name());
 	if(thread_mlfqs)
 	{
 		int pri = thread_current()->priority;
@@ -407,7 +404,6 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-	//printf("hell\n");
 	//timer_print_stats();
 	return round_convert_to_int(mul_int_fixed(100, load_avg));
   /* Not yet implemented. */
@@ -767,7 +763,7 @@ compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 	return a_thread->priority > b_thread->priority;
 }
 
-struct thread *
+int
 wait_thread_tid(tid_t t)
 {
 	struct thread *cur_t = thread_current();
@@ -775,20 +771,24 @@ wait_thread_tid(tid_t t)
 	temp = list_begin(&LIST);
 	end = list_end(&LIST);
 
+	if(t == TID_ERROR)
+		return -1;
+	
 	while(temp!=end)
 	{	
 		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
 		
 		if(temp_t == NULL)
-			return NULL;
+			return -1;
 		if(temp_t->tid == t)
 		{	
-			//printf("aa\n");
+			int a;
 			sema_down(&temp_t->sema_wait);
-			return temp_t;
+			a = temp_t->exit_code;
+			return a;
 		}
 		temp = list_next(temp);
 	}
 	
-	return NULL;
+	return -1;
 }

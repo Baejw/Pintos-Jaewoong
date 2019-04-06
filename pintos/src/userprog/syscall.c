@@ -41,7 +41,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 {
 
 	void *p = f->esp;
-	
+	//hex_dump(p, p, 100, 1);	
 	//printf("%d %p\n",*(int*)(f->esp),f->esp);
 	//hex_dump(f->esp, f->esp, 100, 1);
   //printf ("system call!\n");	
@@ -50,11 +50,13 @@ syscall_handler (struct intr_frame *f UNUSED)
 	//printf("system call!\n");
 	//printf("%d, %d, %d, %d\n",*(int *)(p),(p+4),*(int *)(p+8), *(int *)(p+12));
 	if(!is_user_vaddr(p+4) || !is_user_vaddr(p+8) || !is_user_vaddr(p+12))
+	{	
 		s_exit(-1);
-	//thread_exit();
+	}
+		//thread_exit();
 	switch(*(int *)p)
 	{
-		
+		int len;	
 		case SYS_HALT:
 			s_halt();
 			break;
@@ -62,34 +64,34 @@ syscall_handler (struct intr_frame *f UNUSED)
 			s_exit(*(int *)(p+4));
 			break;
 		case SYS_EXEC:	
-			s_exec(*(int *)(p+4));
+			f->eax = s_exec(*(int *)(p+4));
 			break;
 		case SYS_WAIT:
-			s_wait(*(int *)(p+4));
+			f->eax = s_wait(*(int *)(p+4));
 			break;
 		case SYS_CREATE:
 			f->eax = s_create(*(int *)(p+4),(unsigned)*(int *)(p+8));
 			break;
 		case SYS_REMOVE:
-			s_remove(*(int *)(p+4));
+			f->eax = s_remove(*(int *)(p+4));
 			break;
 		case SYS_OPEN:
-			s_open(*(int *)(p+4));
+			f->eax = s_open(*(int *)(p+4));
 			break;
 		case SYS_FILESIZE:
-			s_filesize(*(int *)(p+4));
+			f->eax = s_filesize(*(int *)(p+4));
 			break;
 		case SYS_READ:
-			s_read(*(int*)(p+4), *(int*)(p+8),(unsigned)*(int *)(p+12));
+			f->eax = s_read(*(int*)(p+4), *(int*)(p+8),(unsigned)*(int *)(p+12));
 			break;
 		case SYS_WRITE:
-			s_write(*(int*)(p+4),*(int*)(p+8),(unsigned)*(int *)(p+12));
+			f->eax=s_write(*(int*)(p+4),*(int*)(p+8),(unsigned)*(int *)(p+12));
 			break;
 		case SYS_SEEK:
 			s_seek(*(int*)(p+4),(unsigned)*(int *)(p+8));
 			break;
 		case SYS_TELL:
-			s_tell(*(int *)(p+4));
+			f->eax = s_tell(*(int *)(p+4));
 			break;
 		case SYS_CLOSE:
 			s_close(*(int *)(p+4));
@@ -117,6 +119,8 @@ tid_t
 s_exec(char * cmd_line)
 {
 	int pid;
+	if(cmd_line == NULL)
+		return -1;
 	pid = process_execute(cmd_line);
 	return pid;
 }
@@ -125,6 +129,7 @@ int
 s_wait(tid_t t)
 {
 	int e_code = process_wait(t);
+	
 	return e_code;
 }
 
@@ -162,9 +167,10 @@ s_open(const char * file)
 
 	fb = palloc_get_page(0);
 	if(fb==NULL)
+	{
 		palloc_free_page(fb);
 		return -1;
-	
+	}
 	c_thread = thread_current();
 	fb->f = of;
 	fb->fd = c_thread->next_fd;
@@ -198,8 +204,7 @@ s_read(int fd, void * buffer, unsigned size)
 		return 0;
 	fb = get_fb_fd(fd);
 
-	len = file_read(fb->f, buffer, (int32_t)size);
-	
+	len = file_read(fb->f, buffer, size);
 	return len;
 }
 

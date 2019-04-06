@@ -151,5 +151,5 @@ int thread_alarm (void);
 bool compare_priority (struct list_elem *, struct list_elem *,void *);
 void thread_update_load(void);
 void thread_update_priority(void);
-struct thread * get_thread_tid(tid_t t);
+int  wait_thread_tid(tid_t t);
 #endif

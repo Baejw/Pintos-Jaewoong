@@ -32,33 +32,37 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  char *fn_copy, *name_copy;
+  char *fn_copy, *fn_copy2, *name_copy;
   char * temp;
 	tid_t tid;
 	struct pcb * p; 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  
+  //printf("name: %s\n",file_name);
+	fn_copy = palloc_get_page (0);
+	fn_copy2 = palloc_get_page (0);
 	p = palloc_get_page(0);
 	sema_init(&p->sema_wait,0);
-	//list_init(&p->file_list);
-	if (fn_copy == NULL)
-    return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
-	name_copy = strtok_r(file_name, " ", &temp);
 	
+	if (fn_copy == NULL)
+	{
+		return TID_ERROR;
+	}
+	
+	strlcpy (fn_copy, file_name, PGSIZE);
+	strlcpy (fn_copy2, file_name, PGSIZE);
+	name_copy = strtok_r(fn_copy2, " ", &temp);
 	
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (name_copy, PRI_DEFAULT, start_process, fn_copy);
  	//t = get_thread_tid(tid);
 	
+	wait_thread_tid(tid);
 	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-	
-	wait_thread_tid(tid);
+		
+			
 	//list_push_back(&thread_current()->children, p->child);
-	p->pid = tid;	
 	return tid;
 }
 
@@ -94,11 +98,14 @@ start_process (void *f_name)
   palloc_free_page (file_name);
   
 	t = thread_current();
-	sema_up(&t->sema_wait);
-	if (!success) 
-    thread_exit ();
-		
-  /* Start the user process by simulating a return from an
+	
+	if (!success)
+	{
+    t->exit_code = -1;
+		thread_exit ();
+	}	
+  sema_up(&t->sema_wait);
+	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
      arguments on the stack in the form of a `struct intr_frame',
@@ -189,47 +196,14 @@ setup_argument(void ** esp, char * filename)
 int
 process_wait (tid_t child_tid) 
 {
-/*	
-	struct thread * c_thread = thread_current();
-	struct list_elem *temp, *end;
-	struct thread *temp_t;
-	temp = list_begin(&c_thread->LIST);
-	end = list_end(&c_thread->LIST);
-	while(temp != end)
-	{
-		temp_t = list_entry(temp, struct thread, ELEM);
-		
-		if(temp_t->tid == child_tid)
-		{
-			if(!temp_t->died)
-				goto doit;
-			else
-				return -1;
-		}
-		temp = list_next(temp);
-	}	
-	
-	return -1;
-
-
-	doit:
-		sema_down(&temp_t->sema_wait);
-
-	return temp_t->exit_code;	
-*/
+/**/
 	
 	//int a= thread_current()->tid;
 	//printf("%s\n",thread_name());
-	while(true)
-	{
-		int i=0;
-		i++;
-		break;
-	}
-
-	struct thread * child_thread;
-	child_thread = wait_thread_tid(child_tid);
-	return 0;
+	
+	int exit_code;
+	exit_code = wait_thread_tid(child_tid);
+	return exit_code;
 	
 	//return -1;
 
@@ -240,8 +214,7 @@ void
 process_exit (void)
 {
   struct thread *curr = thread_current ();
-  uint32_t *pd;
-  
+  uint32_t *pd;  
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
