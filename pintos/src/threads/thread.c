@@ -215,8 +215,11 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 #ifdef USERPROG
 	
-	list_push_back(&thread_current()->children, &t->child);
+//	list_push_back(&thread_current()->children, &t->child);
+	//printf("name: %s\n",thread_name());
+	
 #endif
+	//printf("name:%s\n",thread_name());
 	if(thread_mlfqs)
 	{
 		int pri = thread_current()->priority;
@@ -561,14 +564,11 @@ init_thread (struct thread *t, const char *name, int priority)
 	list_push_back(&LIST, &t->ELEM);
 	
 	t->o_priority = -1;
-
-#ifdef USERPROG
-	list_init(&t->children);
-	sema_init(&t->sema_wait, 0);
-	t->died = false;
-		
-#endif
 	
+#ifdef USERPROG
+	sema_init(&t->sema_wait,0);	
+#endif
+
 	if(thread_mlfqs)
 	{
 
@@ -586,6 +586,12 @@ init_thread (struct thread *t, const char *name, int priority)
 	list_init(&t->lock_list);
 	t->magic = THREAD_MAGIC;
 	t->sleep_tick = 0;
+#ifdef USERPROG
+	sema_init(&t->sema_wait, 0);
+	t->died = false;
+	list_init(&t->file_list);
+	t->next_fd = 3;
+#endif
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -690,12 +696,9 @@ allocate_tid (void)
 {
   static tid_t next_tid = 1;
   tid_t tid;
-//	printf("hell\n");
   lock_acquire (&tid_lock);
-//  printf("heqq\n");
 	tid = next_tid++;
   lock_release (&tid_lock);
-//	printf("how\n");
   return tid;
 }
 
@@ -714,7 +717,7 @@ thread_sleep (int64_t ticks)
 	old_intr_level = intr_disable(); 
 	if(current_thread != idle_thread && ticks>0)
 	{
-		//printf("name : %s time : %d \n",current_thread->name,ticks);			
+					
 		current_thread->sleep_tick = ticks;
 																
 		list_push_back(&sleep_list, &current_thread -> sleep_elem);
@@ -741,8 +744,8 @@ thread_alarm(void)
 
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
-		  //printf("name : %s tick : %d\n",temp_thread->name,temp_tick);			
-			
+		  			
+						
 			thread_unblock(temp_thread);
 			temp = list_remove(temp);
 
@@ -765,18 +768,25 @@ compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 }
 
 struct thread *
-get_thread_tid(tid_t t)
+wait_thread_tid(tid_t t)
 {
 	struct thread *cur_t = thread_current();
 	struct list_elem *temp, *end;
-	temp = list_begin(&cur_t->children);
-	end = list_end(&cur_t->children);
+	temp = list_begin(&LIST);
+	end = list_end(&LIST);
 
 	while(temp!=end)
 	{	
-		struct thread * temp_t = list_entry(temp, struct thread, child);
+		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
+		
+		if(temp_t == NULL)
+			return NULL;
 		if(temp_t->tid == t)
+		{	
+			//printf("aa\n");
+			sema_down(&temp_t->sema_wait);
 			return temp_t;
+		}
 		temp = list_next(temp);
 	}
 	

@@ -1,0 +1,38 @@
+Copying tests/userprog/exec-arg into /tmp/FJHgsIhn0I.dsk...
+Copying tests/userprog/child-args into /tmp/FJHgsIhn0I.dsk...
+Writing command line to /tmp/RovWw0syZc.dsk...
+qemu -hda /tmp/RovWw0syZc.dsk -hdb /tmp/VgFArV1j3w.dsk -hdc /tmp/FJHgsIhn0I.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q -f put exec-arg put child-args run exec-arg
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  26,188,800 loops/s.
+hd0:0: detected 137 sector (68 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 4,032 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 210 sector (105 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'exec-arg' into the file system...
+Putting 'child-args' into the file system...
+Executing 'exec-arg':
+(exec-arg) begin
+Page fault at 0x804a700: rights violation error writing page in kernel context.
+Interrupt 0x0e (#PF Page-Fault Exception) at eip=0xc01070ea
+ cr2=0804a700 error=00000003
+ eax=c010ebfa ebx=0804a700 ecx=00000020 edx=00000020
+ esi=0804a6f6 edi=c010ebfa esp=c010ebfa ebp=c011cef4
+ cs=0008 ds=0010 es=0010 ss=0020
+Kernel PANIC at ../../userprog/exception.c:100 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0xc01079a9 0xc010ad08 0xc010adba 0xc0101c47 0xc0101d7f 0xc01070ea 0xc0109bf6 0xc010afb5 0xc010b037 0xc0101c47 0xc0101d7f 0x804a132 0x80480f2 0x804812c 0x804876c.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 116 ticks
+Thread: 30 idle ticks, 82 kernel ticks, 4 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 89 reads, 430 writes
+hd1:0: 210 reads, 0 writes
+Console: 1522 characters output
+Keyboard: 0 keys pressed
+Exception: 1 page faults
+Powering off...

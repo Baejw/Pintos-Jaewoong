@@ -1,0 +1,31 @@
+Copying tests/userprog/rox-multichild into /tmp/6LgNXHgU0S.dsk...
+Copying tests/userprog/child-rox into /tmp/6LgNXHgU0S.dsk...
+Writing command line to /tmp/RkV50LVNOv.dsk...
+qemu -hda /tmp/RkV50LVNOv.dsk -hdb /tmp/y9hWKIcdwa.dsk -hdc /tmp/6LgNXHgU0S.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q -f put rox-multichild put child-rox run rox-multichild
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  26,188,800 loops/s.
+hd0:0: detected 137 sector (68 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 4,032 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 225 sector (112 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'rox-multichild' into the file system...
+Putting 'child-rox' into the file system...
+Executing 'rox-multichild':
+(rox-multichild) begin
+(rox-multichild) open "child-rox"
+(rox-multichild) open "child-rox": FAILED
+rox-multichild: exit(1)
+Execution of 'rox-multichild' complete.
+Timer: 115 ticks
+Thread: 30 idle ticks, 83 kernel ticks, 2 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 94 reads, 460 writes
+hd1:0: 225 reads, 0 writes
+Console: 952 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

@@ -1,0 +1,26 @@
+FAIL
+Kernel panic in run: PANIC at ../../userprog/exception.c:100 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0xc01079a9 0xc010ad08 0xc010adba 0xc0101c47 0xc0101d7f 0xc01071ae 0xc010bd4b 0xc010bf3d 0xc010b4d7 0xc010af41 0xc010b075 0xc0101c47 0xc0101d7f 0x804a19b 0x80480f2 0x8048140 0x804878c
+Translation of call stack:
+In kernel.o:
+0xc01079a9: debug_panic (.../../lib/kernel/debug.c:34)
+0xc010ad08: kill (.../userprog/exception.c:105)
+0xc010adba: page_fault (.../userprog/exception.c:161)
+0xc0101c47: intr_handler (..../threads/interrupt.c:361)
+0xc0101d7f: intr_entry (threads/intr-stubs.S:38)
+0xc01071ae: strcmp (...ild/../../lib/string.c:81)
+0xc010bd4b: lookup (..../filesys/directory.c:103)
+0xc010bf3d: dir_lookup (..../filesys/directory.c:127)
+0xc010b4d7: filesys_open (..../../filesys/filesys.c:75)
+0xc010af41: s_open (...../userprog/syscall.c:157)
+0xc010b075: syscall_handler (.../../userprog/syscall.c:77)
+0xc0101c47: intr_handler (..../threads/interrupt.c:361)
+0xc0101d7f: intr_entry (threads/intr-stubs.S:38)
+In tests/userprog/open-bad-ptr:
+0x0804a19b: open (...../lib/user/syscall.c:105)
+0x080480f2: test_main (...serprog/open-bad-ptr.c:11)
+0x08048140: main (...ild/../../tests/main.c:13)
+0x0804878c: _start (.../../../lib/user/entry.c:9)
+Translations of user virtual addresses above are based on a guess at
+the binary to use.  If this guess is incorrect, then those
+translations will be misleading.

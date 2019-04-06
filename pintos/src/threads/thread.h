@@ -98,15 +98,18 @@ struct thread
 		struct list_elem ELEM;							/* list element of created thread*/
 		struct list lock_list;							/* LIst of lock that current have */
 		struct lock * locker;									/* Lock which waiting for */
+		
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-		struct semaphore sema_wait;
-		struct list_elem child;
-		struct list children;
 		int exit_code;
+		int next_fd;
+		struct semaphore sema_wait;
 		bool died;
+		struct list file_list;
 #endif
+		
+
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

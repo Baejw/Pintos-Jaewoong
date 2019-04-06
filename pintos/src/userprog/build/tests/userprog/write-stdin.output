@@ -1,0 +1,36 @@
+Copying tests/userprog/write-stdin into /tmp/0PnuXVI9YJ.dsk...
+Writing command line to /tmp/0CJxZSPwc4.dsk...
+qemu -hda /tmp/0CJxZSPwc4.dsk -hdb /tmp/yE5joEbub0.dsk -hdc /tmp/0PnuXVI9YJ.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q -f put write-stdin run write-stdin
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  26,188,800 loops/s.
+hd0:0: detected 137 sector (68 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 4,032 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 105 sector (52 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'write-stdin' into the file system...
+Executing 'write-stdin':
+(write-stdin) begin
+Page fault at 0xf55ff4d3: not present error reading page in kernel context.
+Interrupt 0x0e (#PF Page-Fault Exception) at eip=0xc010c312
+ cr2=f55ff4d3 error=00000000
+ eax=f55ff4bf ebx=00000014 ecx=0804bfce edx=c011c000
+ esi=facc8577 edi=00000000 esp=00000001 ebp=c011cf14
+ cs=0008 ds=0010 es=0010 ss=000a
+Kernel PANIC at ../../userprog/exception.c:100 in kill(): Kernel bug - unexpected interrupt in kernel
+Call stack: 0xc01079a9 0xc010ad08 0xc010adba 0xc0101c47 0xc0101d7f 0xc010c312 0xc010bb2f 0xc010aeb8 0xc010b0b8 0xc0101c47 0xc0101d7f 0x804a1c4 0x8048105 0x8048138 0x804877c.
+The `backtrace' program can make call stacks useful.
+Read "Backtraces" in the "Debugging Tools" chapter
+of the Pintos documentation for more information.
+Timer: 85 ticks
+Thread: 30 idle ticks, 51 kernel ticks, 4 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 62 reads, 218 writes
+hd1:0: 105 reads, 0 writes
+Console: 1471 characters output
+Keyboard: 0 keys pressed
+Exception: 1 page faults
+Powering off...

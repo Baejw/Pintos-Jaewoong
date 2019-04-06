@@ -1,0 +1,32 @@
+Copying tests/userprog/exec-once into /tmp/3BQTfy1bMf.dsk...
+Copying tests/userprog/child-simple into /tmp/3BQTfy1bMf.dsk...
+Writing command line to /tmp/v4KVKkq0nA.dsk...
+qemu -hda /tmp/v4KVKkq0nA.dsk -hdb /tmp/YLckt04M2R.dsk -hdc /tmp/3BQTfy1bMf.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q -f put exec-once put child-simple run exec-once
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  25,369,600 loops/s.
+hd0:0: detected 137 sector (68 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 4,032 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 209 sector (104 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'exec-once' into the file system...
+Putting 'child-simple' into the file system...
+Executing 'exec-once':
+(exec-once) begin
+(child-simple) run
+child-simple: exit(81)
+(exec-once) end
+exec-once: exit(0)
+Execution of 'exec-once' complete.
+Timer: 113 ticks
+Thread: 30 idle ticks, 80 kernel ticks, 3 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 128 reads, 428 writes
+hd1:0: 209 reads, 0 writes
+Console: 906 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

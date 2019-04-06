@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <list.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -17,9 +18,12 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -31,22 +35,31 @@ process_execute (const char *file_name)
   char *fn_copy, *name_copy;
   char * temp;
 	tid_t tid;
-
+	struct pcb * p; 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   
+	p = palloc_get_page(0);
+	sema_init(&p->sema_wait,0);
+	//list_init(&p->file_list);
 	if (fn_copy == NULL)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 	name_copy = strtok_r(file_name, " ", &temp);
 	
-
+	
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (name_copy, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+ 	//t = get_thread_tid(tid);
+	
+	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-  return tid;
+	
+	wait_thread_tid(tid);
+	//list_push_back(&thread_current()->children, p->child);
+	p->pid = tid;	
+	return tid;
 }
 
 /* A thread function that loads a user process and makes it start
@@ -59,6 +72,7 @@ start_process (void *f_name)
   char * token, *save_ptr;
 	struct intr_frame if_;
   bool success;
+	struct thread * t;
 	strlcpy(filename, f_name, strlen(f_name)+1);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -69,7 +83,7 @@ start_process (void *f_name)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
 	success = load (file_name, &if_.eip, &if_.esp);	
-
+	
 	if(success)
 	{	
 		setup_argument(&if_.esp, filename);
@@ -78,9 +92,12 @@ start_process (void *f_name)
 	free(filename);
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  
+	t = thread_current();
+	sema_up(&t->sema_wait);
+	if (!success) 
     thread_exit ();
-
+		
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -172,18 +189,50 @@ setup_argument(void ** esp, char * filename)
 int
 process_wait (tid_t child_tid) 
 {
-	struct thread * child = get_thread_tid(child_tid);
+/*	
+	struct thread * c_thread = thread_current();
+	struct list_elem *temp, *end;
+	struct thread *temp_t;
+	temp = list_begin(&c_thread->LIST);
+	end = list_end(&c_thread->LIST);
+	while(temp != end)
+	{
+		temp_t = list_entry(temp, struct thread, ELEM);
+		
+		if(temp_t->tid == child_tid)
+		{
+			if(!temp_t->died)
+				goto doit;
+			else
+				return -1;
+		}
+		temp = list_next(temp);
+	}	
 	
-	if(child ==NULL)
-		return -1;
-	if(child->died)
-		return -1;
-	sema_down(&child->sema_wait);
-	//printf("a");
+	return -1;
+
+
+	doit:
+		sema_down(&temp_t->sema_wait);
+
+	return temp_t->exit_code;	
+*/
 	
-	return child->exit_code;	
+	//int a= thread_current()->tid;
+	//printf("%s\n",thread_name());
+	while(true)
+	{
+		int i=0;
+		i++;
+		break;
+	}
+
+	struct thread * child_thread;
+	child_thread = wait_thread_tid(child_tid);
+	return 0;
 	
 	//return -1;
+
 }
 
 /* Free the current process's resources. */
@@ -192,12 +241,11 @@ process_exit (void)
 {
   struct thread *curr = thread_current ();
   uint32_t *pd;
-	sema_up(&curr->sema_wait);
   
 	/* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
-  
+	sema_up(&curr->sema_wait);
 	if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set
