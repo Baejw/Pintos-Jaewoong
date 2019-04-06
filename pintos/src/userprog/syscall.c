@@ -51,6 +51,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	//printf("%d, %d, %d, %d\n",*(int *)(p),(p+4),*(int *)(p+8), *(int *)(p+12));
 	if(!is_user_vaddr(p+4) || !is_user_vaddr(p+8) || !is_user_vaddr(p+12))
 	{	
+		
 		s_exit(-1);
 	}
 		//thread_exit();
@@ -111,6 +112,7 @@ s_exit(int status)
 {
 	printf("%s: exit(%d)\n",thread_name(),status);
 	thread_current()->exit_code = status;
+	
 	thread_exit();
 	
 }
@@ -129,7 +131,7 @@ int
 s_wait(tid_t t)
 {
 	int e_code = process_wait(t);
-	
+	//printf("code : %d\n",e_code);	
 	return e_code;
 }
 

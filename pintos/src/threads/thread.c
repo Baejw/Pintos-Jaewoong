@@ -785,6 +785,7 @@ wait_thread_tid(tid_t t)
 			int a;
 			sema_down(&temp_t->sema_wait);
 			a = temp_t->exit_code;
+			printf("thread : %d\n",a);
 			return a;
 		}
 		temp = list_next(temp);
