@@ -27,31 +27,22 @@ unsigned s_tell(int fd);
 void s_close(int fd);
 struct file_block * get_fb_fd(int fd);
 
-	
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 	sema_init(&sema_file, 1);
+	
 }
 
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-
+	
 	void *p = f->esp;
-	//hex_dump(p, p, 100, 1);	
-	//printf("%d %p\n",*(int*)(f->esp),f->esp);
-	//hex_dump(f->esp, f->esp, 100, 1);
-  //printf ("system call!\n");	
-	//printf("%d\n",*(int *)(f->esp));
-	//thread_exit();
-	//printf("system call!\n");
-	//printf("%d, %d, %d, %d\n",*(int *)(p),(p+4),*(int *)(p+8), *(int *)(p+12));
 	if(!is_user_vaddr(p+4) || !is_user_vaddr(p+8) || !is_user_vaddr(p+12))
 	{	
-		
 		s_exit(-1);
 	}
 		//thread_exit();
@@ -112,7 +103,6 @@ s_exit(int status)
 {
 	printf("%s: exit(%d)\n",thread_name(),status);
 	thread_current()->exit_code = status;
-	
 	thread_exit();
 	
 }
@@ -140,7 +130,7 @@ s_create(const char *file, unsigned initial_size)
 {
 	bool success;
 	if(file == NULL)
-		s_exit(-1);
+		return false;
 	success = filesys_create(file, initial_size);
 	return success;
 }
@@ -220,25 +210,35 @@ s_write(int fd, const void * buffer, unsigned size)
 		putbuf(buffer, size);
 		return size;
 	}
+	else if(fd==0)
+		return 0; 
 	
-	if(buffer == NULL)
-		return 0;
 	fb = get_fb_fd(fd);
-
+	if(fb == NULL)
+		return 0; 
 	len = file_write(fb->f, buffer, (int32_t)size);
-	
 	return len;
 }
 
 void 
 s_seek(int fd, unsigned position)
 {
+	struct file_block *fb;
+	fb = get_fb_fd(fb);
+	if(fb==NULL)
+		return;
+	file_seek(fb->f, position);
 }
 
 unsigned 
 s_tell(int fd)
 {
-	return 1;
+	//return 0;
+	struct file_block *fb;
+	fb = get_fb_fd(fb);
+	if(fb==NULL)
+		return  0;
+	return file_tell(fb->f);
 }
 
 void 
@@ -250,6 +250,7 @@ s_close(int fd)
 	if(fb == NULL)
 		return;
 	file_close(fb->f);
+	list_remove(&fb->flist);
 	palloc_free_page(fb);
 
 }
@@ -268,8 +269,10 @@ get_fb_fd(int fd)
 	while(temp != end)
 	{
 		fb = list_entry(temp, struct file_block, flist);
-		if(fb->fd == fd)
+		
+		if(fb->fd == fd){
 			return fb;
+		}
 		temp = list_next(temp);
 	}
 	

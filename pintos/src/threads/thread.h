@@ -105,6 +105,8 @@ struct thread
 		int exit_code;
 		int next_fd;
 		struct semaphore sema_wait;
+		struct semaphore sema_code;
+		struct semaphore sema_load;
 		bool died;
 		struct list file_list;
 #endif
@@ -151,5 +153,8 @@ int thread_alarm (void);
 bool compare_priority (struct list_elem *, struct list_elem *,void *);
 void thread_update_load(void);
 void thread_update_priority(void);
-int  wait_thread_tid(tid_t t);
+int wait_thread_tid(tid_t t);
+int code_thread_tid(tid_t t);
+void load_thread_tid(tid_t t);
+
 #endif

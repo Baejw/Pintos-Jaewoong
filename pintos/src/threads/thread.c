@@ -563,6 +563,8 @@ init_thread (struct thread *t, const char *name, int priority)
 	
 #ifdef USERPROG
 	sema_init(&t->sema_wait,0);	
+	sema_init(&t->sema_code,0);
+	sema_init(&t->sema_load,0);
 #endif
 
 	if(thread_mlfqs)
@@ -586,7 +588,7 @@ init_thread (struct thread *t, const char *name, int priority)
 	sema_init(&t->sema_wait, 0);
 	t->died = false;
 	list_init(&t->file_list);
-	t->next_fd = 3;
+	t->next_fd = 4;
 #endif
 }
 
@@ -737,7 +739,7 @@ thread_alarm(void)
 	{
 		struct thread * temp_thread = list_entry(temp, struct thread, sleep_elem);
 		
-
+		
 		if(temp_thread->sleep_tick<=timer_ticks()) //whether thread wake or not
 		{
 		  			
@@ -762,7 +764,7 @@ compare_priority(struct list_elem *a, struct list_elem *b, void * aux UNUSED)
 	ASSERT(is_thread(a_thread) && is_thread(b_thread));
 	return a_thread->priority > b_thread->priority;
 }
-
+#ifdef USERPROG
 int
 wait_thread_tid(tid_t t)
 {
@@ -770,7 +772,7 @@ wait_thread_tid(tid_t t)
 	struct list_elem *temp, *end;
 	temp = list_begin(&LIST);
 	end = list_end(&LIST);
-
+	//printf("threa: %s\n",thread_name(), t);
 	if(t == TID_ERROR)
 		return -1;
 	
@@ -785,11 +787,70 @@ wait_thread_tid(tid_t t)
 			int a;
 			sema_down(&temp_t->sema_wait);
 			a = temp_t->exit_code;
-			printf("thread : %d\n",a);
+			//printf("thread %s: %d\n",thread_name(),a);
 			return a;
+
 		}
 		temp = list_next(temp);
 	}
-	
 	return -1;
 }
+
+int
+code_thread_tid(tid_t t)
+{
+	struct thread *cur_t = thread_current();
+	struct list_elem *temp, *end;
+	temp = list_begin(&LIST);
+	end = list_end(&LIST);
+	//printf("threa2: %s\n",thread_name(), t);
+	if(t == TID_ERROR)
+		return -1;
+	
+	while(temp!=end)
+	{	
+		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
+		
+		if(temp_t == NULL)
+			return -1;
+		if(temp_t->tid == t)
+		{	
+			int a;
+			a = temp_t->exit_code;
+			sema_up(&temp_t->sema_code);
+			return a;
+
+		}
+		temp = list_next(temp);
+	}
+	//printf("end2\n");	
+	return -1;
+}
+void
+load_thread_tid(tid_t t)
+{
+	struct thread *cur_t = thread_current();
+	struct list_elem *temp, *end;
+	temp = list_begin(&LIST);
+	end = list_end(&LIST);
+	//printf("threa2: %s\n",thread_name(), t);
+	if(t == TID_ERROR)
+		return -1;
+	
+	while(temp!=end)
+	{	
+		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
+		
+		if(temp_t == NULL)
+			return -1;
+		if(temp_t->tid == t)
+		{	
+			sema_down(&temp_t->sema_load);
+			return;
+
+		}
+		temp = list_next(temp);
+	}
+	return -1;
+}
+#endif

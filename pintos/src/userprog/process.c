@@ -36,14 +36,13 @@ process_execute (const char *file_name)
   char * temp;
 	tid_t tid;
 	struct pcb * p; 
-  /* Make a copy of FILE_NAME.
+	struct file * f;  
+/* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   //printf("name: %s\n",file_name);
 	//printf("%s",file_name);
 	fn_copy = palloc_get_page (0);
 	fn_copy2 = palloc_get_page (0);
-	p = palloc_get_page(0);
-	sema_init(&p->sema_wait,0);
 	
 	if (fn_copy == NULL)
 	{
@@ -53,20 +52,20 @@ process_execute (const char *file_name)
 	strlcpy (fn_copy, file_name, PGSIZE);
 	strlcpy (fn_copy2, file_name, PGSIZE);
 	name_copy = strtok_r(fn_copy2, " ", &temp);
-	if(!filesys_open(name_copy))
+	f = filesys_open(name_copy);
+	if(!f)
 	{
 		return -1;
-	}	
+	}
+	
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (name_copy, PRI_DEFAULT, start_process, fn_copy);
  	//t = get_thread_tid(tid);
 	
-	wait_thread_tid(tid);
+	load_thread_tid(tid);
 	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-		
-			
-	//list_push_back(&thread_current()->children, p->child);
+	
 	return tid;
 }
 
@@ -91,7 +90,6 @@ start_process (void *f_name)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
 	success = load (file_name, &if_.eip, &if_.esp);	
-	
 	if(success)
 	{	
 		setup_argument(&if_.esp, filename);
@@ -102,12 +100,12 @@ start_process (void *f_name)
   palloc_free_page (file_name);
   
 	t = thread_current();
-	
+	sema_up(&t->sema_load);
 	if (!success)
 	{
 		thread_exit ();
 	}	
-  sema_up(&t->sema_wait);
+  	
 	/* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -203,10 +201,9 @@ process_wait (tid_t child_tid)
 	
 	//int a= thread_current()->tid;
 	//printf("%s\n",thread_name());
-	
 	int exit_code;
-	exit_code = wait_thread_tid(child_tid);
-	printf("name %s %d\n",thread_name(),exit_code);
+	wait_thread_tid(child_tid);
+	exit_code = code_thread_tid(child_tid);
 	return exit_code;
 	
 	//return -1;
@@ -219,11 +216,22 @@ process_exit (void)
 {
   struct thread *curr = thread_current ();
   uint32_t *pd;  
-		
+  struct file_block *fb;	
+  struct list_elem *temp, *end;
 /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
+	temp = list_begin(&curr->file_list);
+	end = list_end(&curr->file_list);	
+	while(temp != end)
+	{
+		fb = list_entry(temp, struct file_block, flist);
+		temp = list_next(temp);
+		file_allow_write(fb->f);
+	}
+	
 	sema_up(&curr->sema_wait);
+	sema_down(&curr->sema_code);
 	if (pd != NULL) 
     {
       /* Correct ordering here is crucial.  We must set
@@ -400,7 +408,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
               uint32_t mem_page = phdr.p_vaddr & ~PGMASK;
               uint32_t page_offset = phdr.p_vaddr & PGMASK;
               uint32_t read_bytes, zero_bytes;
-              if (phdr.p_filesz > 0)
+               if(mem_page == 0) mem_page = 0X1000;
+               if (phdr.p_filesz > 0)
                 {
                   /* Normal segment.
                      Read initial part from disk and zero the rest. */
@@ -483,9 +492,9 @@ validate_segment (const struct Elf32_Phdr *phdr, struct file *file)
      it then user code that passed a null pointer to system calls
      could quite likely panic the kernel by way of null pointer
      assertions in memcpy(), etc. */
- /* if (phdr->p_vaddr < PGSIZE)
+  if (phdr->p_offset < PGSIZE)
     return false;
-*/
+
   /* It's okay. */
   return true;
 }
