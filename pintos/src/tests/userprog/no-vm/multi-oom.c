@@ -25,7 +25,7 @@
 #include "tests/lib.h"
 
 static const int EXPECTED_DEPTH_TO_PASS = 30;
-static const int EXPECTED_REPETITIONS = 10;
+static const int EXPECTED_REPETITIONS =10 ;
 
 const char *test_name = "multi-oom";
 
@@ -114,7 +114,7 @@ main (int argc, char *argv[])
 
   /* If -k is passed, crash this process. */
   if (argc > 2 && !strcmp(argv[2], "-k"))
-    {
+    {	
       consume_some_resources_and_die (n);
       NOT_REACHED ();
     }

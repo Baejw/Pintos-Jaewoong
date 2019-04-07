@@ -39,12 +39,10 @@ process_execute (const char *file_name)
 	struct file * f;  
 /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
-  //printf("name: %s\n",file_name);
-	//printf("%s",file_name);
 	fn_copy = palloc_get_page (0);
 	fn_copy2 = palloc_get_page (0);
 	
-	if (fn_copy == NULL)
+	if (fn_copy == NULL || fn_copy2== NULL)
 	{
 		return TID_ERROR;
 	}
@@ -65,7 +63,11 @@ process_execute (const char *file_name)
 	load_thread_tid(tid);
 	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
-	
+	if(get_thread_tid(tid)==-1)
+	{	
+		process_wait(tid);
+		tid = TID_ERROR;
+	}		
 	return tid;
 }
 
@@ -94,7 +96,7 @@ start_process (void *f_name)
 	{	
 		setup_argument(&if_.esp, filename);
 	}
-	
+		
 	free(filename);
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -103,6 +105,7 @@ start_process (void *f_name)
 	sema_up(&t->sema_load);
 	if (!success)
 	{
+		t->exit_code = -1;
 		thread_exit ();
 	}	
   	
@@ -216,20 +219,15 @@ process_exit (void)
 {
   struct thread *curr = thread_current ();
   uint32_t *pd;  
-  struct file_block *fb;	
-  struct list_elem *temp, *end;
+  int i;
 /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
-	temp = list_begin(&curr->file_list);
-	end = list_end(&curr->file_list);	
-	while(temp != end)
+	for(i =0;i<131;i++)
 	{
-		fb = list_entry(temp, struct file_block, flist);
-		temp = list_next(temp);
-		file_allow_write(fb->f);
+		if(curr->file_list[i]!=NULL)
+			s_close(i);
 	}
-	
 	sema_up(&curr->sema_wait);
 	sema_down(&curr->sema_code);
 	if (pd != NULL) 

@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "filesys/file.h"
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -108,7 +109,9 @@ struct thread
 		struct semaphore sema_code;
 		struct semaphore sema_load;
 		bool died;
-		struct list file_list;
+		struct file * file_list[131];
+		int parent;
+		bool waited;
 #endif
 		
 
@@ -156,5 +159,6 @@ void thread_update_priority(void);
 int wait_thread_tid(tid_t t);
 int code_thread_tid(tid_t t);
 void load_thread_tid(tid_t t);
-
+int get_thread_tid(tid_t t);
+void wait_exit_thread(void);
 #endif

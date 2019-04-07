@@ -9,7 +9,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include <list.h>
-
+#include "devices/input.h"
 static void syscall_handler (struct intr_frame *);
 static struct semaphore sema_file;
 void s_halt(void);
@@ -25,15 +25,12 @@ int s_write(int fd, const void * buffer, unsigned size);
 void s_seek(int fd, unsigned position);
 unsigned s_tell(int fd);
 void s_close(int fd);
-struct file_block * get_fb_fd(int fd);
-
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 	sema_init(&sema_file, 1);
-	
 }
 
 static void
@@ -121,7 +118,6 @@ int
 s_wait(tid_t t)
 {
 	int e_code = process_wait(t);
-	//printf("code : %d\n",e_code);	
 	return e_code;
 }
 
@@ -130,7 +126,7 @@ s_create(const char *file, unsigned initial_size)
 {
 	bool success;
 	if(file == NULL)
-		return false;
+		s_exit(-1);
 	success = filesys_create(file, initial_size);
 	return success;
 }
@@ -146,57 +142,44 @@ int
 s_open(const char * file)
 {
 	struct file *of;
-	struct file_block *fb;
 	struct thread * c_thread;
-	struct list *f_list;
-	
+	int i;
 	if(file==NULL)
 		return -1;
 	
 	of = filesys_open(file);
 	if(of==NULL)
 		return -1;
-
-	fb = palloc_get_page(0);
-	if(fb==NULL)
-	{
-		palloc_free_page(fb);
-		return -1;
-	}
+	if(strcmp(thread_name(), file)==0)
+		file_deny_write(of);
 	c_thread = thread_current();
-	fb->f = of;
-	fb->fd = c_thread->next_fd;
-	c_thread->next_fd += 1;
-
-	list_push_back(&c_thread->file_list, &fb->flist);
+	for(i =3;i<131;i++)
+	{
+		if(c_thread->file_list[i] == NULL)
+		{
+			c_thread->file_list[i] =of;
+			return i;
+		}
+	}
 	
-	return fb->fd;
+	return -1;
 }
 
 int 
 s_filesize(int fd)
 {
-	struct file_block * fb;
-	
-	fb = get_fb_fd(fd);
-	if(fd == NULL)
-		return 0;
-	else
-		return file_length(fb->f);
+	return file_length(thread_current()->file_list[fd]);
 }
 
 int 
 s_read(int fd, void * buffer, unsigned size)
 {
 	int len =0;
-	struct file_block * fb;
 	if(fd ==0)
-		return len;
+		len = input_getc();
 	if(fd ==1)
 		return 0;
-	fb = get_fb_fd(fd);
-
-	len = file_read(fb->f, buffer, size);
+	len = file_read(thread_current()->file_list[fd], buffer, size);
 	return len;
 }
 
@@ -204,7 +187,6 @@ int
 s_write(int fd, const void * buffer, unsigned size)
 {
 	int len;
-	struct file_block * fb;
 	if(fd == 1)
 	{	
 		putbuf(buffer, size);
@@ -213,70 +195,30 @@ s_write(int fd, const void * buffer, unsigned size)
 	else if(fd==0)
 		return 0; 
 	
-	fb = get_fb_fd(fd);
-	if(fb == NULL)
-		return 0; 
-	len = file_write(fb->f, buffer, (int32_t)size);
+	len = file_write(thread_current()->file_list[fd], buffer, (int32_t)size);
 	return len;
 }
 
 void 
 s_seek(int fd, unsigned position)
 {
-	struct file_block *fb;
-	fb = get_fb_fd(fb);
-	if(fb==NULL)
-		return;
-	file_seek(fb->f, position);
+	
+	file_seek(thread_current()->file_list[fd], position);
 }
 
 unsigned 
 s_tell(int fd)
 {
-	//return 0;
-	struct file_block *fb;
-	fb = get_fb_fd(fb);
-	if(fb==NULL)
-		return  0;
-	return file_tell(fb->f);
+	return file_tell(thread_current()->file_list[fd]);
 }
 
 void 
 s_close(int fd)
 {
-	struct file_block *fb;
-	fb = get_fb_fd(fd);
-
-	if(fb == NULL)
+	if(thread_current()->file_list[fd]==NULL)
 		return;
-	file_close(fb->f);
-	list_remove(&fb->flist);
-	palloc_free_page(fb);
+
+	file_close(thread_current()->file_list[fd]);
+	thread_current()->file_list[fd] = NULL;	
 
 }
-
-struct file_block *
-get_fb_fd(int fd)
-{
-	struct thread * c_thread;
-	struct list_elem *temp, *end;
-	struct file_block * fb;
-	c_thread = thread_current();
-
-	temp = list_begin(&c_thread->file_list);
-	end = list_end(&c_thread->file_list);
-
-	while(temp != end)
-	{
-		fb = list_entry(temp, struct file_block, flist);
-		
-		if(fb->fd == fd){
-			return fb;
-		}
-		temp = list_next(temp);
-	}
-	
-	return NULL;
-
-}
-

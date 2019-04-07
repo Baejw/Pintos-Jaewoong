@@ -213,10 +213,6 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-#ifdef USERPROG
-//	list_push_back(&thread_current()->children, &t->child);
-	
-#endif
 	if(thread_mlfqs)
 	{
 		int pri = thread_current()->priority;
@@ -587,8 +583,11 @@ init_thread (struct thread *t, const char *name, int priority)
 #ifdef USERPROG
 	sema_init(&t->sema_wait, 0);
 	t->died = false;
-	list_init(&t->file_list);
 	t->next_fd = 4;
+	t->waited = false;
+	int i;
+	for(i = 0; i< 131; i++)
+		t->file_list[i] = NULL;
 #endif
 }
 
@@ -814,12 +813,17 @@ code_thread_tid(tid_t t)
 		if(temp_t == NULL)
 			return -1;
 		if(temp_t->tid == t)
-		{	
-			int a;
-			a = temp_t->exit_code;
-			sema_up(&temp_t->sema_code);
-			return a;
-
+		{
+			if(temp_t->parent == cur_t->tid)
+			{
+				int a;
+				a = temp_t->exit_code;
+				sema_up(&temp_t->sema_code);
+				return a;
+			}
+			else{
+				return -1;
+			}
 		}
 		temp = list_next(temp);
 	}
@@ -845,6 +849,7 @@ load_thread_tid(tid_t t)
 			return -1;
 		if(temp_t->tid == t)
 		{	
+			temp_t->parent = cur_t->tid;	
 			sema_down(&temp_t->sema_load);
 			return;
 
@@ -852,5 +857,50 @@ load_thread_tid(tid_t t)
 		temp = list_next(temp);
 	}
 	return -1;
+}
+int
+get_thread_tid(tid_t t)
+{
+	struct thread *cur_t = thread_current();
+	struct list_elem *temp, *end;
+	temp = list_begin(&LIST);
+	end = list_end(&LIST);
+	//printf("threa2: %s\n",thread_name(), t);
+	if(t == TID_ERROR)
+		return -1;
+	
+	while(temp!=end)
+	{	
+		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
+		
+		if(temp_t == NULL)
+			return -1;
+		if(temp_t->tid == t)
+		{	
+			//printf("exit: %d\n",temp_t->exit_code);	
+			return temp_t->exit_code;
+
+		}
+		temp = list_next(temp);
+	}
+	return -1;
+}
+void
+wait_exit_thread(void)
+{
+	struct thread *cur_t = thread_current();
+	struct list_elem *temp, *end;
+	temp = list_begin(&LIST);
+	end = list_end(&LIST);
+	
+	while(temp!=end)
+	{	
+		struct thread * temp_t = list_entry(temp, struct thread, ELEM);
+		temp = list_next(temp);
+		if(temp_t == NULL)
+			return -1;
+		if(temp_t->exit_code == 0)
+			process_wait(temp_t->tid);
+	}
 }
 #endif
