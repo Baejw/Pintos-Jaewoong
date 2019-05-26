@@ -9,16 +9,24 @@
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
-
+#define DIRECT 124
+#define B_SIZE 128
 /* On-disk inode.
    Must be exactly DISK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
-    disk_sector_t start;                /* First data sector. */
+    disk_sector_t direct[DIRECT];
+		disk_sector_t ddirect;
+		disk_sector_t start;                /* First data sector. */
     off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
-    uint32_t unused[125];               /* Not used. */
+    //uint32_t unused[125];               /* Not used. */
   };
+
+struct indexer
+{
+	disk_sector_t blocks[B_SIZE];
+};
 
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
@@ -43,6 +51,32 @@ struct inode
    INODE.
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
+static disk_sector_t
+get_sector(const struct inode_disk *id, off_t pos)
+{
+	size_t idx = pos / DISK_SECTOR_SIZE;
+	disk_sector_t sector;	
+	if(idx > DIRECT+B_SIZE*B_SIZE)
+		PANIC("file is larger than 8MB");
+	if(idx < DIRECT)
+	{
+		return id->direct[idx];
+	}
+	else
+	{
+		struct indexer *block = calloc(1, sizeof(struct indexer));
+		size_t idx_1 = (idx-DIRECT)/B_SIZE;
+		size_t idx_2 = (idx-DIRECT)%B_SIZE;
+		disk_read(filesys_disk, id->ddirect, block);
+		disk_read(filesys_disk, block->blocks[idx_1], block);
+		sector = block->blocks[idx_2];
+		free(block);
+	}
+
+
+	return sector;
+}
+
 static disk_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) 
 {
@@ -69,9 +103,136 @@ inode_init (void)
    disk.
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
+
+static bool
+inode_allocate(disk_sector_t sectors, off_t length)
+{
+	struct inode_disk *disk_inode = NULL;
+	bool success = false;
+	
+	ASSERT (length >= 0);
+
+  /* If this assertion fails, the inode structure is not exactly
+     one sector in size, and you should fix that. */
+  ASSERT (sizeof *disk_inode == DISK_SECTOR_SIZE);
+
+
+  disk_inode = calloc (1, sizeof *disk_inode);
+  if (disk_inode != NULL)
+    {
+      disk_inode->length = length;
+      disk_inode->magic = INODE_MAGIC;
+		}
+	
+	size_t sector = bytes_to_sectors(length);
+	int i, j;
+	static char zeros[B_SIZE];
+	if(sector <= DIRECT)
+	{
+		for(i=0;i<sector;i++)
+		{
+			free_map_allocate(1, &disk_inode->direct[i]);
+			disk_write(filesys_disk, disk_inode->direct[i], zeros);
+		}
+		disk_write(filesys_disk, sectors, disk_inode);
+	}
+	else
+	{
+		
+		for(i=0;i<DIRECT;i++)
+		{
+			free_map_allocate(1, &disk_inode->direct[i]);
+			disk_write(filesys_disk, disk_inode->direct[i], zeros);
+		}
+		sector -= DIRECT;
+		struct indexer *idx_1, *idx_2;
+		idx_1 = calloc(1, sizeof(struct indexer));
+		idx_2 = calloc(1, sizeof(struct indexer));
+		free_map_allocate(1, &disk_inode->ddirect);
+		disk_write(filesys_disk, disk_inode->ddirect, zeros);
+		disk_write(filesys_disk, sectors, disk_inode);
+		disk_read(filesys_disk, disk_inode->ddirect, idx_1);
+		
+		size_t sec_1 = DIV_ROUND_UP(sector, B_SIZE);
+		for(i=0;i<sec_1;i++)
+		{
+			free_map_allocate(1, &idx_1->blocks[i]);
+			disk_write(filesys_disk, idx_1->blocks[i],zeros);
+		}
+		disk_write(filesys_disk, disk_inode->ddirect, idx_1);
+		
+		for(i=0;i<sec_1;i++)
+		{
+			disk_read(filesys_disk, idx_1->blocks[i], idx_2);
+			int sec_2 = sector>B_SIZE ? B_SIZE : sector;
+			for(j=0;j<sec_2;j++)
+			{
+				free_map_allocate(1, &idx_2->blocks[j]);
+				disk_write(filesys_disk, idx_2->blocks[j], zeros);
+			}
+			disk_write(filesys_disk, idx_1->blocks[i], idx_2);
+		}
+		
+		free(idx_1);
+		free(idx_2);
+		free(disk_inode);
+	}
+	return true;
+
+}
+	
+static bool
+inode_release(struct inode *inode)
+{
+	off_t len = inode->data.length;
+	size_t sector = bytes_to_sectors(len);
+	struct inode_disk *disk_inode = &inode->data;
+	struct indexer *idx_1, *idx_2;
+	int i, j;
+	if(sector <= DIRECT)
+	{
+		for(i=0;i<sector;i++)
+		{
+			free_map_release(disk_inode->direct[i], 1);
+		}
+	}
+	else
+	{
+		for(i=0;i<DIRECT;i++)
+		{
+			free_map_release(disk_inode->direct[i],1);
+		}
+
+		idx_1 = calloc(1, sizeof(struct indexer));
+		idx_2 = calloc(1, sizeof(struct indexer));
+		disk_read(filesys_disk, disk_inode->ddirect, idx_1);
+		int sec_1 = DIV_ROUND_UP(sector, B_SIZE);
+		for(i=0;i<sec_1;i++)
+		{	
+			disk_read(filesys_disk, idx_1->blocks[i], idx_2);
+			int sec_2 = sector > B_SIZE ? B_SIZE : sector;
+			for(j=0;j<sec_2;j++)
+			{
+				free_map_release(idx_2->blocks[j], 1);
+			}
+			sector -= B_SIZE;
+		}
+	free(idx_1);
+	free(idx_2);
+	}
+	
+}
+
 bool
 inode_create (disk_sector_t sector, off_t length)
 {
+	bool a= true;
+	if(a)
+	{
+		return inode_allocate(sector, length);
+	}
+	else
+	{
   struct inode_disk *disk_inode = NULL;
   bool success = false;
 
@@ -101,8 +262,10 @@ inode_create (disk_sector_t sector, off_t length)
           success = true; 
         } 
       free (disk_inode);
-    }
-  return success;
+		}
+	
+  	return success;
+	}
 }
 
 /* Reads an inode from SECTOR
@@ -177,8 +340,9 @@ inode_close (struct inode *inode)
       if (inode->removed) 
         {
           free_map_release (inode->sector, 1);
-          free_map_release (inode->data.start,
-                            bytes_to_sectors (inode->data.length)); 
+          inode_release(inode);
+					//free_map_release (inode->data.start,
+          //                  bytes_to_sectors (inode->data.length)); 
         }
 
       free (inode); 
@@ -254,6 +418,16 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
    less than SIZE if end of file is reached or an error occurs.
    (Normally a write at end of file would extend the inode, but
    growth is not yet implemented.) */
+
+static bool
+inode_grow(struct inode *inode, off_t length)
+{
+	off_t extended = length - inode->data.length;
+	size_t e_sector = bytes_to_sectors(extended);
+	size_t sector = bytes_to_sectors(inode->data.length);
+		
+}
+	
 off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
                 off_t offset) 
@@ -264,6 +438,12 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
   if (inode->deny_write_cnt)
     return 0;
+	if(inode->data.length <offset + size)
+	{
+		inode_grow(inode, offset + size);
+		inode->data.length = offset + size;
+		disk_write(filesys_disk, inode->sector, &inode->data);
+	}
 
   while (size > 0) 
     {
