@@ -1,0 +1,33 @@
+Copying tests/filesys/extended/grow-seq-sm into /tmp/Wwn8hl01dV.dsk...
+Copying tests/filesys/extended/tar into /tmp/Wwn8hl01dV.dsk...
+Writing command line to /tmp/RwaW16DYcC.dsk...
+qemu -hda /tmp/RwaW16DYcC.dsk -hdb tmp.dsk -hdc /tmp/Wwn8hl01dV.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q -f put grow-seq-sm put tar run grow-seq-sm
+Pintos booting with 4,096 kB RAM...
+371 pages available in kernel pool.
+371 pages available in user pool.
+Calibrating timer...  26,188,800 loops/s.
+hd0:0: detected 145 sector (72 kB) disk, model "QEMU HARDDISK", serial "QM00001"
+hd0:1: detected 4,032 sector (1 MB) disk, model "QEMU HARDDISK", serial "QM00002"
+hd1:0: detected 226 sector (113 kB) disk, model "QEMU HARDDISK", serial "QM00003"
+Formatting file system...done.
+Boot complete.
+Putting 'grow-seq-sm' into the file system...
+Putting 'tar' into the file system...
+Executing 'grow-seq-sm':
+(grow-seq-sm) begin
+(grow-seq-sm) create "testme"
+(grow-seq-sm) open "testme"
+(grow-seq-sm) writing "testme"
+(grow-seq-sm) write 1234 bytes at offset 0 in "testme" failed: FAILED
+grow-seq-sm: exit(1)
+Execution of 'grow-seq-sm' complete.
+Timer: 119 ticks
+Thread: 30 idle ticks, 84 kernel ticks, 5 user ticks
+hd0:0: 0 reads, 0 writes
+hd0:1: 120 reads, 466 writes
+hd1:0: 226 reads, 0 writes
+Console: 1003 characters output
+Keyboard: 0 keys pressed
+Exception: 0 page faults
+Powering off...

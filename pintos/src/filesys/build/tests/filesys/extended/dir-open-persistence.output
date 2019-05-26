@@ -1,0 +1,7 @@
+Writing command line to /tmp/cprwHaaUdO.dsk...
+qemu -hda /tmp/cprwHaaUdO.dsk -hdb tmp.dsk -hdc /tmp/KxssjWEjaM.dsk -m 4 -net none -nographic -monitor null
+Kernel command line: -q run 'tar fs.tar /' get fs.tar
+Pintos booting with 4,096 kB RAM...
+374 pages available in kernel pool.
+374 pages available in user pool.
+Calibrating timer...  26,188,800 loops/s.
