@@ -55,6 +55,7 @@ process_execute (const char *file_name)
 	{
 		return -1;
 	}
+	free(f);
 	
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (name_copy, PRI_DEFAULT, start_process, fn_copy);
@@ -63,6 +64,9 @@ process_execute (const char *file_name)
 	load_thread_tid(tid);
 	if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
+	temp = NULL;
+	name_copy = NULL;
+	palloc_free_page(fn_copy2);
 	if(get_thread_tid(tid)==-1)
 	{	
 		process_wait(tid);
