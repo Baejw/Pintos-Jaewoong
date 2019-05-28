@@ -432,7 +432,6 @@ static void
 select_sector (struct disk *d, disk_sector_t sec_no) 
 {
   struct channel *c = d->channel;
-
   ASSERT (sec_no < d->capacity);
   ASSERT (sec_no < (1UL << 28));
   

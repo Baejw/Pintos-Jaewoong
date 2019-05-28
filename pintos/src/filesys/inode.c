@@ -81,8 +81,9 @@ static disk_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) 
 {
   ASSERT (inode != NULL);
-  if (pos < inode->data.length)
-    return inode->data.start + pos / DISK_SECTOR_SIZE;
+	if (pos < inode->data.length)
+    //return get_sector(&inode->data, pos);
+		return inode->data.start + pos / DISK_SECTOR_SIZE;
   else
     return -1;
 }
@@ -226,7 +227,7 @@ inode_release(struct inode *inode)
 bool
 inode_create (disk_sector_t sector, off_t length)
 {
-	bool a= true;
+	bool a= false;
 	if(a)
 	{
 		return inode_allocate(sector, length);
@@ -340,9 +341,9 @@ inode_close (struct inode *inode)
       if (inode->removed) 
         {
           free_map_release (inode->sector, 1);
-          inode_release(inode);
-					//free_map_release (inode->data.start,
-          //                  bytes_to_sectors (inode->data.length)); 
+        	//inode_release(inode);
+					free_map_release (inode->data.start,
+                            bytes_to_sectors (inode->data.length)); 
         }
 
       free (inode); 
@@ -422,10 +423,103 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
 static bool
 inode_grow(struct inode *inode, off_t length)
 {
+	struct inode_disk * disk_inode = &inode->data;
 	off_t extended = length - inode->data.length;
 	size_t e_sector = bytes_to_sectors(extended);
-	size_t sector = bytes_to_sectors(inode->data.length);
+	size_t o_sector = bytes_to_sectors(inode->data.length);
+	size_t sector = e_sector+o_sector;
+	int i, j;
+	static char zeros[B_SIZE];
+	if(sector <= DIRECT)
+	{
+		for(i=o_sector;i<sector;i++)
+		{
+			free_map_allocate(1, &disk_inode->direct[i]);
+			disk_write(filesys_disk, disk_inode->direct[i], zeros);
+		}
+		disk_write(filesys_disk, inode->sector, disk_inode);
+	}
+	else if(o_sector<DIRECT)
+	{	
+		for(i=o_sector;i<DIRECT;i++)
+		{
+			
+			free_map_allocate(1, &disk_inode->direct[i]);
+			disk_write(filesys_disk, disk_inode->direct[i], zeros);
+		}
+		sector = e_sector - (DIRECT-o_sector);
+		struct indexer *idx_1, *idx_2;
+		idx_1 = calloc(1, sizeof(struct indexer));
+		idx_2 = calloc(1, sizeof(struct indexer));
+		free_map_allocate(1, &disk_inode->ddirect);
+		disk_write(filesys_disk, disk_inode->ddirect, zeros);
+		disk_write(filesys_disk, inode->sector, disk_inode);
+		disk_read(filesys_disk, disk_inode->ddirect, idx_1);
 		
+		size_t sec_1 = DIV_ROUND_UP(sector, B_SIZE);
+		for(i=0;i<sec_1;i++)
+		{
+			free_map_allocate(1, &idx_1->blocks[i]);
+			disk_write(filesys_disk, idx_1->blocks[i],zeros);
+		}
+		disk_write(filesys_disk, disk_inode->ddirect, idx_1);
+		
+		for(i=0;i<sec_1;i++)
+		{
+			disk_read(filesys_disk, idx_1->blocks[i], idx_2);
+			size_t sec_2 = sector>B_SIZE ? B_SIZE : sector;
+			for(j=0;j<sec_2;j++)
+			{
+				free_map_allocate(1, &idx_2->blocks[j]);
+				disk_write(filesys_disk, idx_2->blocks[j], zeros);
+			}
+			sector -= sec_2;
+			disk_write(filesys_disk, idx_1->blocks[i], idx_2);
+		}
+		
+		free(idx_1);
+		free(idx_2);
+	}
+	else
+	{
+		ASSERT(o_sector>=DIRECT);
+		size_t osec_1 = DIV_ROUND_UP(o_sector-DIRECT, B_SIZE);
+		size_t osec_2 = (o_sector-DIRECT)%B_SIZE;
+		struct indexer *idx_1, *idx_2;
+		idx_1 = calloc(1, sizeof(struct indexer));
+		idx_2 = calloc(1, sizeof(struct indexer));
+		disk_read(filesys_disk, disk_inode->ddirect, idx_1);
+		disk_read(filesys_disk, idx_1->blocks[osec_1-1], idx_2);
+		//fill osec_1 sector first
+		size_t temp = e_sector > (B_SIZE-osec_2) ? B_SIZE : e_sector+osec_2;
+		for(i=osec_2;i<temp;i++)
+		{
+			free_map_allocate(1, &idx_2->blocks[i]);
+			disk_write(filesys_disk, idx_2->blocks[i], zeros);
+		}
+		disk_write(filesys_disk, idx_1->blocks[osec_1-1], idx_2);
+		e_sector -= (temp-osec_2);
+		size_t sec_1 = DIV_ROUND_UP(e_sector, B_SIZE);
+		
+		for(i=osec_1;i<sec_1;i++)
+		{
+			disk_read(filesys_disk, idx_1->blocks[i], idx_2);
+			size_t sec_2 = e_sector>B_SIZE ? B_SIZE : e_sector;
+			for(j=0;j<sec_2;j++)
+			{
+				free_map_allocate(1, &idx_2->blocks[j]);
+				disk_write(filesys_disk, idx_2->blocks[j], zeros);
+			}
+			e_sector -= sec_2;
+			disk_write(filesys_disk, idx_1->blocks[i], idx_2);
+		}
+		
+		free(idx_1);
+		free(idx_2);
+
+
+	}
+	free(disk_inode);
 }
 	
 off_t
@@ -449,7 +543,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     {
       /* Sector to write, starting byte offset within sector. */
       disk_sector_t sector_idx = byte_to_sector (inode, offset);
-      int sector_ofs = offset % DISK_SECTOR_SIZE;
+			int sector_ofs = offset % DISK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
       off_t inode_left = inode_length (inode) - offset;
